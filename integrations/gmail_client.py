@@ -57,7 +57,7 @@ class GmailClient:
             conn = self._connect_imap()
             conn.select("INBOX")
 
-            status, data = conn.uid("search", "UTF-8", "UNSEEN")
+            status, data = conn.uid("search", None, "UNSEEN")  # type: ignore[arg-type]
             if status != "OK" or not data[0]:
                 conn.logout()
                 return []
