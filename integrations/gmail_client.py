@@ -155,6 +155,26 @@ class GmailClient:
             print(f"[GmailClient] mark_as_read error: {e}")
             return False
 
+    def list_folders(self) -> None:
+        try:
+            conn = self._connect_imap()
+            status, folders = conn.list()
+            conn.logout()
+
+            if status != "OK":
+                print("[GmailClient] list_folders: unexpected status.")
+                return
+
+            print("[GmailClient] Available folders:")
+            for entry in folders:
+                if isinstance(entry, bytes):
+                    parts = entry.decode().split(' "/" ')
+                    name = parts[-1].strip().strip('"')
+                    print(f"  {name}")
+
+        except Exception as e:
+            print(f"[GmailClient] list_folders error: {e}")
+
     def send_message(self):
         raise NotImplementedError(
             "Agents never send emails automatically. Use create_draft() to stage a reply "

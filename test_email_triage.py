@@ -59,6 +59,8 @@ def run_gmail_only():
     for msg in messages:
         print(f"  [{msg['id']}] {msg['date']} | {msg['from']} | {msg['subject']}")
 
+    gmail.list_folders()
+
 
 def run_mock():
     print("Mode: MOCK — fake email, mock Gmail, real Claude.\n")
