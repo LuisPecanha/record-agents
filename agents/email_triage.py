@@ -59,7 +59,15 @@ def run(gmail=None, sheets=None, claude=None, dry_run: bool = False) -> None:
     messages = gmail.get_unread_messages()
     print(f"[email_triage] {len(messages)} unread message(s) to process.\n")
 
+    _skip_patterns = ("no-reply", "noreply", "accounts.google.com", "googlecommunityteam")
+
     for msg in messages:
+        from_lower = msg.get("from", "").lower()
+        if any(pattern in from_lower for pattern in _skip_patterns):
+            print(f"[email_triage] Skipping automated sender: {msg['from']}")
+            gmail.mark_as_read(msg["id"])
+            continue
+
         error_log = ""
         classification = ""
         draft_created = False
