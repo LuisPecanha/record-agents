@@ -5,6 +5,7 @@ import email.header
 import email.message
 import imaplib
 import os
+import time
 from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -108,30 +109,24 @@ class GmailClient:
 
             conn = self._connect_imap()
 
-            draft_folders = ['"[Gmail]/Drafts"', '"[Gmail]/Rascunhos"']
-            appended = False
+            folder = '"[Gmail]/Drafts"'
 
-            for folder in draft_folders:
-                try:
-                    status, _ = conn.append(
-                        folder,
-                        "\\Draft",
-                        imaplib.Time2Internaldate(now.timetuple()),
-                        mime.as_bytes(),
-                    )
-                    if status == "OK":
-                        print(f"[GmailClient] Draft saved to {folder}.")
-                        appended = True
-                        break
-                except Exception:
-                    continue
+            conn.select(folder)
 
+            status, _ = conn.append(
+                folder,
+                "\\Draft",
+                imaplib.Time2Internaldate(time.localtime()),
+                mime.as_bytes(),
+            )
             conn.logout()
 
-            if not appended:
-                print("[GmailClient] create_draft: could not find Drafts folder.")
+            if status == "OK":
+                print(f"[GmailClient] Draft saved to {folder}.")
+            else:
+                print(f"[GmailClient] create_draft: append returned status {status}.")
 
-            return appended
+            return status == "OK"
 
         except Exception as e:
             print(f"[GmailClient] create_draft error: {e}")
