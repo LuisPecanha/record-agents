@@ -108,7 +108,7 @@ class GmailClient:
 
             conn = self._connect_imap()
 
-            draft_folders = ["[Gmail]/Drafts", "[Gmail]/Rascunhos"]
+            draft_folders = ['"[Gmail]/Drafts"', '"[Gmail]/Rascunhos"']
             appended = False
 
             for folder in draft_folders:
