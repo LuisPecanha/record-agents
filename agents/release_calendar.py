@@ -43,7 +43,7 @@ def run(sheets=None, gmail=None, dry_run: bool = False) -> None:
     email_equipe = os.getenv("EMAIL_EQUIPE")
 
     rows = sheets.get_rows(SHEET_LANCAMENTOS)
-    pending = [r for r in rows if str(r.get("processado", "")).strip().upper() == "N"]
+    pending = [r for r in rows if r.get("processado") is False or str(r.get("processado", "")).strip().upper() == "FALSE"]
     print(f"[release_calendar] {len(pending)} unprocessed release(s) found.\n")
 
     for release in pending:
@@ -114,7 +114,7 @@ def run(sheets=None, gmail=None, dry_run: bool = False) -> None:
             if dry_run:
                 print(f"[release_calendar] [DRY RUN] Would mark row {row_index} as processado=S")
             else:
-                sheets.update_cell(SHEET_LANCAMENTOS, row_index, "processado", "S")
+                sheets.update_cell(SHEET_LANCAMENTOS, row_index, "processado", True)
                 print(f"[release_calendar] Row {row_index} marked as processado=S")
 
         except Exception as e:
