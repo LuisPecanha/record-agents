@@ -48,8 +48,8 @@ def run(sheets=None, gmail=None, dry_run: bool = False) -> None:
 
     for release in pending:
         row_index = release["_row_index"]
-        artist = release.get("artista", "Unknown")
-        track = release.get("track", "Unknown")
+        artist = release.get("nome_artista", "Unknown")
+        track = release.get("titulo_track", "Unknown")
         raw_date = release.get("data_lancamento", "")
 
         print(f"[release_calendar] Processing: {artist} — {track} (row {row_index})")
