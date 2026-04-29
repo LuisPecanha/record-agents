@@ -5,6 +5,7 @@ import email.header
 import email.message
 import imaplib
 import os
+import smtplib
 import time
 from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart
@@ -170,8 +171,24 @@ class GmailClient:
         except Exception as e:
             print(f"[GmailClient] list_folders error: {e}")
 
-    def send_message(self):
-        raise NotImplementedError(
-            "Agents never send emails automatically. Use create_draft() to stage a reply "
-            "and let a human review and send it from Gmail."
-        )
+    def send_email(self, to: str, subject: str, body: str) -> bool:
+        try:
+            mime = MIMEMultipart()
+            mime["From"] = self.email_address
+            mime["To"] = to
+            mime["Subject"] = subject
+            mime.attach(MIMEText(body, "plain", "utf-8"))
+
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+                smtp.login(self.email_address, self.app_password)
+                smtp.sendmail(self.email_address, to, mime.as_string())
+
+            print(f"[GmailClient] Email sent to {to}.")
+            return True
+
+        except smtplib.SMTPAuthenticationError:
+            print("[GmailClient] send_email: authentication failed. Check your App Password in .env.")
+            return False
+        except Exception as e:
+            print(f"[GmailClient] send_email error: {e}")
+            return False
