@@ -19,6 +19,7 @@ env/
 credentials/
 token.json
 client_secret.json
+balters_sheets_service_account.json
 
 # IDE
 .vscode/
