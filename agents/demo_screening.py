@@ -10,15 +10,22 @@ def _parse_response(text: str) -> tuple[str, str, str]:
     resultado = ""
     motivo = ""
     mensagem_artista = ""
+    current_key = None
 
     for line in text.split("\n"):
         if line.startswith("RESULTADO:"):
+            current_key = "resultado"
             resultado = line.split(":", 1)[1].strip()
         elif line.startswith("MOTIVO:"):
+            current_key = "motivo"
             motivo = line.split(":", 1)[1].strip()
         elif line.startswith("MENSAGEM_ARTISTA:"):
+            current_key = "mensagem_artista"
             mensagem_artista = line.split(":", 1)[1].strip()
+        elif current_key == "mensagem_artista":
+            mensagem_artista += "\n" + line
 
+    mensagem_artista = mensagem_artista.strip()
     return resultado, motivo, mensagem_artista
 
 
