@@ -35,6 +35,12 @@ scheduler.add_job(release_calendar_run, "interval", minutes=60)
 scheduler.add_job(demo_screening_run, "interval", minutes=60)
 scheduler.add_job(press_kit_run, "interval", minutes=60)
 
+print("[boot] Running all agents on startup...")
+email_triage_run(sheets, gmail, claude)
+release_calendar_run(sheets, gmail, claude)
+demo_screening_run(sheets, gmail, claude)
+print("[boot] Startup run complete.")
+
 print("Balters Agents running...")
 
 try:
