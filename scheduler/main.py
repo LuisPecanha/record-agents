@@ -14,6 +14,9 @@ if not api_key:
 import anthropic
 from apscheduler.schedulers.blocking import BlockingScheduler
 
+from integrations.sheets_client import SheetsClient
+from integrations.gmail_client import GmailClient
+
 from agents.email_triage import run as email_triage_run
 from agents.release_calendar import run as release_calendar_run
 from agents.demo_screening import run as demo_screening_run
@@ -27,6 +30,10 @@ message = client.messages.create(
     messages=[{"role": "user", "content": "Say hello from Balters Records agent system."}],
 )
 print(message.content[0].text)
+
+sheets = SheetsClient()
+gmail = GmailClient()
+claude = anthropic.Anthropic()
 
 scheduler = BlockingScheduler()
 
