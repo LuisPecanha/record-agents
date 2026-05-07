@@ -8,6 +8,7 @@ from google.oauth2.service_account import Credentials
 SHEET_LANCAMENTOS = "lancamentos"
 SHEET_DEADLINES = "deadlines"
 SHEET_EMAIL_LOG = "email_log"
+SHEET_DEMOS = "demos"
 
 _SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
