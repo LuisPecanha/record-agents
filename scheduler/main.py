@@ -29,7 +29,7 @@ message = client.messages.create(
     max_tokens=64,
     messages=[{"role": "user", "content": "Say hello from Balters Records agent system."}],
 )
-print(message.content[0].text)
+print(message.content[0].text)  # type: ignore[union-attr]
 
 sheets = SheetsClient()
 gmail = GmailClient()
