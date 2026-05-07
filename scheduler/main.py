@@ -33,7 +33,7 @@ print(message.content[0].text)
 
 sheets = SheetsClient()
 gmail = GmailClient()
-claude = anthropic.Anthropic()
+claude = client
 
 scheduler = BlockingScheduler()
 
@@ -43,9 +43,9 @@ scheduler.add_job(demo_screening_run, "interval", minutes=60)
 scheduler.add_job(press_kit_run, "interval", minutes=60)
 
 print("[boot] Running all agents on startup...")
-email_triage_run(sheets, gmail, claude)
-release_calendar_run(sheets, gmail, claude)
-demo_screening_run(sheets, gmail, claude)
+email_triage_run(gmail=gmail, sheets=sheets, claude=claude)
+release_calendar_run(sheets=sheets, gmail=gmail)
+demo_screening_run(sheets=sheets, gmail=gmail, claude=claude)
 print("[boot] Startup run complete.")
 
 print("Balters Agents running...")
