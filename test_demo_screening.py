@@ -192,8 +192,8 @@ def run_live() -> None:
         resultado, motivo, mensagem_artista = _parse_response(response.content[0].text)
         print(f"Claude result: {resultado} — {motivo}")
 
-    sheets.update_cell(SHEET_DEMOS, row_number, 7, resultado)
-    sheets.update_cell(SHEET_DEMOS, row_number, 8, motivo)
+    sheets.update_cell(SHEET_DEMOS, row_number, "resultado", resultado)
+    sheets.update_cell(SHEET_DEMOS, row_number, "motivo", motivo)
     print(f"Sheet updated — resultado={resultado}, motivo={motivo}")
 
     if resultado == "APROVADO":
@@ -210,7 +210,7 @@ def run_live() -> None:
     else:
         print("AVISO: email ao artista não enviado — campo email não existe no formulário")
 
-    sheets.update_cell(SHEET_DEMOS, row_number, 9, True)
+    sheets.update_cell(SHEET_DEMOS, row_number, "processado", True)
     print(f"Row {row_number} marked as processado=True")
 
 
