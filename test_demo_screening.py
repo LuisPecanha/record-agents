@@ -20,6 +20,7 @@ MOCK_SUBMISSIONS = [
         "link_track": "https://soundcloud.com/djteste/track1",
         "link_perfil": "https://instagram.com/djteste",
         "mensagem": "Oi, segue minha track!",
+        "email_artista": "teste@teste.com",
     },
     {
         "_row_index": 2,
@@ -28,6 +29,7 @@ MOCK_SUBMISSIONS = [
         "link_track": "https://soundcloud.com/mcexemplo/track1",
         "link_perfil": "",
         "mensagem": "",
+        "email_artista": "teste@teste.com",
     },
     {
         "_row_index": 3,
@@ -36,6 +38,7 @@ MOCK_SUBMISSIONS = [
         "link_track": "",
         "link_perfil": "",
         "mensagem": "",
+        "email_artista": "teste@teste.com",
     },
 ]
 
@@ -69,6 +72,7 @@ def _screen_submission(row: dict, claude) -> None:
     link_track = str(row.get("link_track", "")).strip()
     link_perfil = str(row.get("link_perfil", "")).strip()
     mensagem = str(row.get("mensagem", "")).strip()
+    email_artista = str(row.get("email_artista", "")).strip()
 
     print(f"\n--- Submission: {nome_artistico} ---")
 
@@ -99,6 +103,7 @@ def _screen_submission(row: dict, claude) -> None:
     resultado, motivo, mensagem_artista = _parse_response(response.content[0].text)
     print(f"RESULTADO: {resultado}")
     print(f"MOTIVO: {motivo}")
+    print(f"EMAIL_ARTISTA: {email_artista}")
     print(f"MENSAGEM_ARTISTA:\n{mensagem_artista}")
 
 
@@ -166,6 +171,7 @@ def run_live() -> None:
     link_track = str(row.get("link_track", "")).strip()
     link_perfil = str(row.get("link_perfil", "")).strip()
     mensagem = str(row.get("mensagem", "")).strip()
+    email_artista = str(row.get("email_artista", "")).strip()
 
     print(f"Processing row {row_number}: {nome_artistico}\n")
 
@@ -197,18 +203,54 @@ def run_live() -> None:
     print(f"Sheet updated — resultado={resultado}, motivo={motivo}")
 
     if resultado == "APROVADO":
+        if email_artista:
+            sent = gmail.send_email(
+                to=email_artista,
+                subject="Recebemos sua demo — Balters Records",
+                body=mensagem_artista,
+            )
+            print(f"Artist email {'sent' if sent else 'FAILED'} → {email_artista}")
+
         email_matias = os.getenv("EMAIL_MATIAS")
         email_ronaldo = os.getenv("EMAIL_RONALDO")
-        body = mensagem_artista + f"\n\nTrack: {link_track}\nPerfil: {link_perfil}"
-        subject = f"[Demo APROVADO] {nome_artistico} — {genero}"
+        team_body = (
+            "Nova demo aprovada na triagem automática.\n\n"
+            f"Artista: {nome_artistico}\n"
+            f"Gênero: {genero}\n"
+            f"Track: {link_track}\n"
+            f"Perfil: {link_perfil}\n"
+            f"Email: {email_artista}\n\n"
+            "A track aguarda escuta humana."
+        )
+        team_subject = f"[Demo APROVADO] {nome_artistico} — {genero}"
         for recipient in [email_matias, email_ronaldo]:
             if not recipient:
-                print("Skipping notification — recipient env var not set.")
+                print("Skipping team notification — recipient env var not set.")
                 continue
-            sent = gmail.send_email(to=recipient, subject=subject, body=body)
-            print(f"Email {'sent' if sent else 'FAILED'} → {recipient}")
-    else:
-        print("AVISO: email ao artista não enviado — campo email não existe no formulário")
+            sent = gmail.send_email(to=recipient, subject=team_subject, body=team_body)
+            print(f"Team email {'sent' if sent else 'FAILED'} → {recipient}")
+
+    elif resultado == "REPROVADO":
+        if email_artista:
+            sent = gmail.send_email(
+                to=email_artista,
+                subject="Sobre sua demo — Balters Records",
+                body=mensagem_artista,
+            )
+            print(f"Artist email {'sent' if sent else 'FAILED'} → {email_artista}")
+        else:
+            print("AVISO: email_artista vazio — email ao artista não enviado.")
+
+    elif resultado == "INCOMPLETO":
+        if email_artista:
+            sent = gmail.send_email(
+                to=email_artista,
+                subject="Sua submissão está incompleta — Balters Records",
+                body=mensagem_artista,
+            )
+            print(f"Artist email {'sent' if sent else 'FAILED'} → {email_artista}")
+        else:
+            print("AVISO: email_artista vazio — email ao artista não enviado.")
 
     sheets.update_cell(SHEET_DEMOS, row_number, "processado", True)
     print(f"Row {row_number} marked as processado=True")

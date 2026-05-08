@@ -52,6 +52,7 @@ def run(sheets=None, gmail=None, claude=None) -> None:
         link_track = str(row.get("link_track", "")).strip()
         link_perfil = str(row.get("link_perfil", "")).strip()
         mensagem = str(row.get("mensagem", "")).strip()
+        email_artista = str(row.get("email_artista", "")).strip()
 
         print(f"[demo_screening] Processing row {row_number}: {nome_artistico}")
 
@@ -86,19 +87,52 @@ def run(sheets=None, gmail=None, claude=None) -> None:
             print(f"[demo_screening] Sheet updated — resultado={resultado}, motivo={motivo}")
 
             if resultado == "APROVADO":
-                body = mensagem_artista + f"\n\nTrack: {link_track}\nPerfil: {link_perfil}"
-                subject = f"[Demo APROVADO] {nome_artistico} — {genero}"
+                if email_artista:
+                    sent = gmail.send_email(
+                        to=email_artista,
+                        subject="Recebemos sua demo — Balters Records",
+                        body=mensagem_artista,
+                    )
+                    print(f"[demo_screening] Artist email {'sent' if sent else 'FAILED'} → {email_artista}")
+
+                team_body = (
+                    "Nova demo aprovada na triagem automática.\n\n"
+                    f"Artista: {nome_artistico}\n"
+                    f"Gênero: {genero}\n"
+                    f"Track: {link_track}\n"
+                    f"Perfil: {link_perfil}\n"
+                    f"Email: {email_artista}\n\n"
+                    "A track aguarda escuta humana."
+                )
+                team_subject = f"[Demo APROVADO] {nome_artistico} — {genero}"
                 for recipient in [email_matias, email_ronaldo]:
                     if not recipient:
-                        print(f"[demo_screening] Skipping notification — recipient env var not set.")
+                        print("[demo_screening] Skipping team notification — recipient env var not set.")
                         continue
-                    sent = gmail.send_email(to=recipient, subject=subject, body=body)
-                    print(f"[demo_screening] Email {'sent' if sent else 'FAILED'} → {recipient}")
-            else:
-                print(
-                    f"[demo_screening] AVISO: email ao artista não enviado — "
-                    f"campo email não existe no formulário"
-                )
+                    sent = gmail.send_email(to=recipient, subject=team_subject, body=team_body)
+                    print(f"[demo_screening] Team email {'sent' if sent else 'FAILED'} → {recipient}")
+
+            elif resultado == "REPROVADO":
+                if email_artista:
+                    sent = gmail.send_email(
+                        to=email_artista,
+                        subject="Sobre sua demo — Balters Records",
+                        body=mensagem_artista,
+                    )
+                    print(f"[demo_screening] Artist email {'sent' if sent else 'FAILED'} → {email_artista}")
+                else:
+                    print("[demo_screening] AVISO: email_artista vazio — email ao artista não enviado.")
+
+            elif resultado == "INCOMPLETO":
+                if email_artista:
+                    sent = gmail.send_email(
+                        to=email_artista,
+                        subject="Sua submissão está incompleta — Balters Records",
+                        body=mensagem_artista,
+                    )
+                    print(f"[demo_screening] Artist email {'sent' if sent else 'FAILED'} → {email_artista}")
+                else:
+                    print("[demo_screening] AVISO: email_artista vazio — email ao artista não enviado.")
 
             sheets.update_cell(SHEET_DEMOS, row_number, "processado", True)
             print(f"[demo_screening] Row {row_number} marked as processado=True\n")
