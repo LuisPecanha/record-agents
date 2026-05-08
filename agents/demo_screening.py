@@ -38,7 +38,11 @@ def run(sheets=None, gmail=None, claude=None) -> None:
     email_ronaldo = os.getenv("EMAIL_RONALDO")
 
     rows = sheets.get_rows(SHEET_DEMOS)
-    pending = [r for r in rows if str(r.get("nome_artistico", "")).strip() and not r.get("processado")]
+    pending = [
+        r for r in rows
+        if str(r.get("nome_artistico", "")).strip()
+        and str(r.get("processado", "")).strip().upper() != "TRUE"
+    ]
     print(f"[demo_screening] {len(pending)} unprocessed submission(s) found.\n")
 
     for row in pending:

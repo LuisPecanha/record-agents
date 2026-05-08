@@ -124,7 +124,7 @@ def run_dry() -> None:
     pending = [
         r for r in rows
         if str(r.get("nome_artistico", "")).strip()
-        and not r.get("processado")
+        and str(r.get("processado", "")).strip().upper() != "TRUE"
     ]
 
     print(f"{len(pending)} unprocessed submission(s) found.\n")
@@ -152,7 +152,7 @@ def run_live() -> None:
     pending = [
         r for r in rows
         if str(r.get("nome_artistico", "")).strip()
-        and not r.get("processado")
+        and str(r.get("processado", "")).strip().upper() != "TRUE"
     ]
 
     if not pending:
