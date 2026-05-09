@@ -220,6 +220,8 @@ class GmailClient:
 
     def send_email(self, to: str, subject: str, body: str) -> str:
         try:
+            recipients = [addr.strip() for addr in to.split(",") if addr.strip()]
+
             mime = MIMEMultipart()
             mime["From"] = self.email_address
             mime["To"] = to
@@ -229,7 +231,7 @@ class GmailClient:
 
             with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
                 smtp.login(self.email_address, self.app_password)
-                smtp.sendmail(self.email_address, to, mime.as_string())
+                smtp.sendmail(self.email_address, recipients, mime.as_string())
 
             print(f"[GmailClient] Email sent to {to}.")
             return mime["Message-ID"]
