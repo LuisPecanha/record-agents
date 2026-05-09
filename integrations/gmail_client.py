@@ -3,6 +3,7 @@
 import email
 import email.header
 import email.message
+import email.utils
 import imaplib
 import os
 import smtplib
@@ -171,12 +172,13 @@ class GmailClient:
         except Exception as e:
             print(f"[GmailClient] list_folders error: {e}")
 
-    def send_email(self, to: str, subject: str, body: str) -> bool:
+    def send_email(self, to: str, subject: str, body: str) -> str:
         try:
             mime = MIMEMultipart()
             mime["From"] = self.email_address
             mime["To"] = to
             mime["Subject"] = subject
+            mime["Message-ID"] = email.utils.make_msgid(domain="balters.com")
             mime.attach(MIMEText(body, "plain", "utf-8"))
 
             with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
@@ -184,14 +186,14 @@ class GmailClient:
                 smtp.sendmail(self.email_address, to, mime.as_string())
 
             print(f"[GmailClient] Email sent to {to}.")
-            return True
+            return mime["Message-ID"]
 
         except smtplib.SMTPAuthenticationError:
             print("[GmailClient] send_email: authentication failed. Check your App Password in .env.")
-            return False
+            return ""
         except Exception as e:
             print(f"[GmailClient] send_email error: {e}")
-            return False
+            return ""
 
     def send_email_with_attachment(
         self, to: str, subject: str, body: str, attachment_content: str, attachment_filename: str
