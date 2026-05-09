@@ -57,6 +57,7 @@ balters-agents/
 ### prompts/prompts.py
 - `EMAIL_TRIAGE_PROMPT` — classifies emails into DEMO/IMPRENSA/PARCERIA/BOOKING/OUTRO and generates a draft reply. Output: `CLASSIFICACAO: X` / `RASCUNHO: ...`
 - `DEMO_SCREENING_PROMPT` — screens demo submissions by genre and link presence. Output: `RESULTADO: X` / `MOTIVO: ...` / `MENSAGEM_ARTISTA: ...`
+- `PRESS_KIT_PROMPT` — generates press copy from release data. Output: three delimited blocks `=== PRESS KIT BLURB ===`, `=== RELEASE NOTES ===`, `=== SOCIAL CAPTION ===`. Accepts `{release_data}` placeholder. Never invents facts not in input.
 
 ### agents/email_triage.py
 - `run(gmail, sheets, claude, dry_run)` — full triage loop
@@ -86,6 +87,21 @@ balters-agents/
   - **INCOMPLETO**: sends `MENSAGEM_ARTISTA` to `email_artista` if present; warns if empty
 - Sheet columns: `timestamp`, `nome_artistico`, `genero`, `link_track`, `link_perfil`, `mensagem`, `email_artista`, `resultado`, `motivo`, `processado`
 
+### agents/press_kit.py
+- `run(sheets, gmail, claude)` — reads `lancamentos` tab, filters rows where `processado_presskit != TRUE` and `nome_artista` is not empty
+- Builds `release_data` string from available fields, skipping empty ones
+- Uses `claude-sonnet-4-5`, max_tokens=2000
+- Parses three output blocks by splitting on `===` delimiters
+- Writes `presskit_blurb`, `release_notes`, `social_caption` to sheet via `update_cell()`
+- Sends email to `EMAIL_GUILHERME` with all three blocks labeled as draft for review
+- Marks `processado_presskit = True`
+- Sheet columns used: `nome_artista`, `titulo_track`, `genero`, `data_lancamento`, `descricao`, `link_track`, `link_perfil`, `presskit_blurb`, `release_notes`, `social_caption`, `processado_presskit`
+
+## scheduler/main.py
+- Instantiates `SheetsClient`, `GmailClient`, and `anthropic.Anthropic` once at boot — shared across all agents
+- Runs all four agents on boot before starting the scheduler loop
+- All four agents registered as 60-minute interval jobs
+
 ## Manual test scripts
 
 | Script | Purpose |
@@ -93,6 +109,7 @@ balters-agents/
 | `test_email_triage.py` | `--mock`, `--gmail`, `--live`, default dry-run |
 | `test_release_calendar.py` | `--dry-run`, `--live` (appends test row + full run) |
 | `test_demo_screening.py` | `--mock`, `--dry-run`, `--live` (processes first pending row) |
+| `test_press_kit.py` | `--mock`, `--dry-run`, `--live` (processes first pending row) |
 | `test_sheets_connection.py` | Verifies connection to all tabs |
 | `test_smtp.py` | Sends a test email to `EMAIL_EQUIPE` via SMTP |
 
@@ -113,8 +130,6 @@ balters-agents/
 
 ## Next steps
 
-1. Implement `agents/press_kit.py` — reads release info from Sheets, generates press release + bio + captions with Claude
-2. Write `PRESS_KIT_PROMPT` in `prompts/prompts.py`
-3. Fill in Setup and Deploy sections in `README.md`
-4. Write real tests in `tests/test_agents.py`
-5. Configure Railway deployment
+1. Fill in Setup and Deploy sections in `README.md`
+2. Write real tests in `tests/test_agents.py`
+3. Configure Railway deployment
