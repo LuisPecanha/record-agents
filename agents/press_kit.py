@@ -11,6 +11,7 @@ from integrations.sheets_client import SHEET_LANCAMENTOS
 from prompts.prompts import PRESS_KIT_PROMPT
 
 _DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive"]
+_PRESS_KIT_ROOT_ID = os.environ.get("GOOGLE_DRIVE_PRESS_KIT_ROOT_ID")
 
 
 def _drive_service():
@@ -35,7 +36,7 @@ def _get_or_create_folder(service, name: str, parent_id: str | None = None) -> s
 
 
 def _upload_press_kit(service, filename: str, content: str, year: str, month: str) -> str:
-    root_id = _get_or_create_folder(service, "balters_press_kits")
+    root_id = _PRESS_KIT_ROOT_ID
     year_id = _get_or_create_folder(service, year, parent_id=root_id)
     month_id = _get_or_create_folder(service, month, parent_id=year_id)
 
