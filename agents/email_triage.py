@@ -143,17 +143,17 @@ def run(gmail=None, sheets=None, claude=None, dry_run: bool = False) -> None:
                     print("[email_triage] WARNING: APPROVER_EMAILS is empty — notification skipped.")
 
                 if sheets is not None and draft_created:
-                    sheets.append_row("email_log", [
-                        timestamp,
-                        msg.get("from", ""),
-                        msg.get("subject", ""),
-                        classification,
-                        draft_body,
-                        "TRUE" if notification_sent else "FALSE",
-                        notification_thread_id,
-                        "FALSE",
-                        "FALSE",
-                    ])
+                    sheets.append_row("email_log", {
+                        "data": timestamp,
+                        "remetente": msg.get("from", ""),
+                        "assunto": msg.get("subject", ""),
+                        "classificacao": classification,
+                        "rascunho": draft_body,
+                        "notification_sent": "TRUE" if notification_sent else "FALSE",
+                        "notification_thread_id": notification_thread_id,
+                        "aprovado": "FALSE",
+                        "enviado": "FALSE",
+                    })
 
         except Exception as e:
             error_log = str(e)
