@@ -3,47 +3,10 @@
 import os
 from datetime import datetime
 
-from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaInMemoryUpload
-
 from integrations.sheets_client import SHEET_LANCAMENTOS
 from prompts.prompts import PRESS_KIT_PROMPT
 
-_DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive"]
-_PRESS_KIT_ROOT_ID = os.environ.get("GOOGLE_DRIVE_PRESS_KIT_ROOT_ID")
-
-
-def _drive_service():
-    creds_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_PATH", "balters_sheets_service_account.json")
-    creds = Credentials.from_service_account_file(creds_path, scopes=_DRIVE_SCOPES)
-    return build("drive", "v3", credentials=creds)
-
-
-def _get_or_create_folder(service, name: str, parent_id: str | None = None) -> str:
-    query = f"name='{name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
-    if parent_id:
-        query += f" and '{parent_id}' in parents"
-    results = service.files().list(q=query, fields="files(id)").execute()
-    files = results.get("files", [])
-    if files:
-        return files[0]["id"]
-    metadata: dict = {"name": name, "mimeType": "application/vnd.google-apps.folder"}
-    if parent_id:
-        metadata["parents"] = [parent_id]
-    folder = service.files().create(body=metadata, fields="id").execute()
-    return folder["id"]
-
-
-def _upload_press_kit(service, filename: str, content: str, year: str, month: str) -> str:
-    root_id = _PRESS_KIT_ROOT_ID
-    year_id = _get_or_create_folder(service, year, parent_id=root_id)
-    month_id = _get_or_create_folder(service, month, parent_id=year_id)
-
-    metadata = {"name": filename, "parents": [month_id]}
-    media = MediaInMemoryUpload(content.encode("utf-8"), mimetype="text/plain")
-    file = service.files().create(body=metadata, media_body=media, fields="id,webViewLink").execute()
-    return file.get("webViewLink", "")
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def _build_release_data(row: dict) -> str:
@@ -96,6 +59,15 @@ def _format_file_content(blurb: str, release_notes: str, social_caption: str) ->
     )
 
 
+def _save_press_kit(filename: str, content: str, year: str, month: str) -> str:
+    dir_path = os.path.join(_PROJECT_ROOT, "press_kits", year, month)
+    os.makedirs(dir_path, exist_ok=True)
+    file_path = os.path.join(dir_path, filename)
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(content)
+    return file_path
+
+
 def run(sheets=None, gmail=None, claude=None) -> None:
     print("\n" + "=" * 60)
     print("[press_kit] Run started")
@@ -142,19 +114,23 @@ def run(sheets=None, gmail=None, claude=None) -> None:
             filename = f"{safe_name}.txt"
             file_content = _format_file_content(blurb, release_notes, social_caption)
 
-            drive = _drive_service()
-            drive_link = _upload_press_kit(drive, filename, file_content, year, month)
-            print(f"[press_kit] File uploaded to Drive: {drive_link}")
+            file_path = _save_press_kit(filename, file_content, year, month)
+            print(f"[press_kit] File saved: {file_path}")
 
             if email_guilherme:
                 subject = f"Press Kit gerado — {titulo_track} · {nome_artista}"
                 body = (
                     f"Olá Guilherme,\n\n"
-                    f"O press kit de '{titulo_track}' ({nome_artista}) foi gerado e está pronto para revisão.\n\n"
-                    f"Acesse o arquivo no Google Drive:\n{drive_link}\n\n"
+                    f"O press kit de '{titulo_track}' ({nome_artista}) foi gerado e está anexado a este email para revisão.\n\n"
                     f"Equipe Balters Records"
                 )
-                sent = gmail.send_email(to=email_guilherme, subject=subject, body=body)
+                sent = gmail.send_email_with_attachment(
+                    to=email_guilherme,
+                    subject=subject,
+                    body=body,
+                    attachment_content=file_content,
+                    attachment_filename=filename,
+                )
                 print(f"[press_kit] Email {'sent' if sent else 'FAILED'} → {email_guilherme}")
             else:
                 print("[press_kit] EMAIL_GUILHERME not set — skipping email.")

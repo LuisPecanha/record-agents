@@ -192,3 +192,31 @@ class GmailClient:
         except Exception as e:
             print(f"[GmailClient] send_email error: {e}")
             return False
+
+    def send_email_with_attachment(
+        self, to: str, subject: str, body: str, attachment_content: str, attachment_filename: str
+    ) -> bool:
+        try:
+            mime = MIMEMultipart()
+            mime["From"] = self.email_address
+            mime["To"] = to
+            mime["Subject"] = subject
+            mime.attach(MIMEText(body, "plain", "utf-8"))
+
+            attachment = MIMEText(attachment_content, "plain", "utf-8")
+            attachment.add_header("Content-Disposition", "attachment", filename=attachment_filename)
+            mime.attach(attachment)
+
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+                smtp.login(self.email_address, self.app_password)
+                smtp.sendmail(self.email_address, to, mime.as_string())
+
+            print(f"[GmailClient] Email with attachment sent to {to}.")
+            return True
+
+        except smtplib.SMTPAuthenticationError:
+            print("[GmailClient] send_email_with_attachment: authentication failed. Check your App Password in .env.")
+            return False
+        except Exception as e:
+            print(f"[GmailClient] send_email_with_attachment error: {e}")
+            return False
