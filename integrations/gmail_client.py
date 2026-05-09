@@ -152,6 +152,52 @@ class GmailClient:
             print(f"[GmailClient] mark_as_read error: {e}")
             return False
 
+    def get_replies_to_thread(self, thread_id: str) -> list[dict]:
+        try:
+            conn = self._connect_imap()
+            conn.select("INBOX", readonly=True)
+
+            uids: set[bytes] = set()
+            for header in ("In-Reply-To", "References"):
+                status, data = conn.uid("search", None, f'HEADER "{header}" "{thread_id}"')  # type: ignore[arg-type]
+                if status == "OK" and data[0]:
+                    uids.update(data[0].split())
+
+            results = []
+            for uid in uids:
+                status, msg_data = conn.uid("fetch", uid, "(BODY.PEEK[])")
+                if status != "OK":
+                    continue
+
+                raw = msg_data[0][1]
+                msg = email.message_from_bytes(raw)
+
+                from_addr = self._decode_header(msg.get("From", ""))
+
+                body = ""
+                if msg.is_multipart():
+                    for part in msg.walk():
+                        if part.get_content_type() == "text/plain" and part.get("Content-Disposition") is None:
+                            charset = part.get_content_charset() or "utf-8"
+                            payload = part.get_payload(decode=True)
+                            if isinstance(payload, bytes):
+                                body = payload.decode(charset, errors="replace")
+                            break
+                else:
+                    payload = msg.get_payload(decode=True)
+                    if isinstance(payload, bytes):
+                        charset = msg.get_content_charset() or "utf-8"
+                        body = payload.decode(charset, errors="replace")
+
+                results.append({"from": from_addr, "body": body})
+
+            conn.logout()
+            return results
+
+        except Exception as e:
+            print(f"[GmailClient] get_replies_to_thread error: {e}")
+            return []
+
     def list_folders(self) -> None:
         try:
             conn = self._connect_imap()
