@@ -46,6 +46,7 @@ print("[boot] Running all agents on startup...")
 email_triage_run(gmail=gmail, sheets=sheets, claude=claude)
 release_calendar_run(sheets=sheets, gmail=gmail)
 demo_screening_run(sheets=sheets, gmail=gmail, claude=claude)
+press_kit_run(sheets=sheets, gmail=gmail, claude=claude)
 print("[boot] Startup run complete.")
 
 print("Balters Agents running...")
