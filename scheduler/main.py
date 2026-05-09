@@ -21,6 +21,7 @@ from agents.email_triage import run as email_triage_run
 from agents.release_calendar import run as release_calendar_run
 from agents.demo_screening import run as demo_screening_run
 from agents.press_kit import run as press_kit_run
+from agents.draft_approval import run as draft_approval_run
 
 client = anthropic.Anthropic(api_key=api_key)
 
@@ -41,6 +42,7 @@ scheduler.add_job(email_triage_run, "interval", minutes=60)
 scheduler.add_job(release_calendar_run, "interval", minutes=60)
 scheduler.add_job(demo_screening_run, "interval", minutes=60)
 scheduler.add_job(press_kit_run, "interval", minutes=60)
+scheduler.add_job(draft_approval_run, "interval", minutes=15, kwargs={"gmail": gmail, "sheets": sheets})
 
 print("[boot] Running all agents on startup...")
 email_triage_run(gmail=gmail, sheets=sheets, claude=claude)
