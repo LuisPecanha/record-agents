@@ -10,6 +10,7 @@ from integrations.gmail_client import GmailClient
 from prompts.prompts import EMAIL_TRIAGE_PROMPT
 
 _BODY_LIMIT = 3000
+APPROVER_EMAILS = [e.strip() for e in os.getenv("APPROVER_EMAILS", "").split(",") if e.strip()]
 
 
 def _parse_response(text: str) -> tuple[str, str]:
@@ -38,6 +39,22 @@ def _reply_subject(subject: str) -> str:
     if subject.lower().startswith("re:"):
         return subject
     return f"Re: {subject}"
+
+
+def _build_notification_body(from_field: str, subject: str, classification: str, draft: str) -> str:
+    sep = "-" * 60
+    return (
+        f"Um novo email foi triado e um rascunho de resposta foi criado.\n"
+        f"Para aprovar o envio, responda este email com APROVADO.\n"
+        f"{sep}\n"
+        f"De: {from_field}\n"
+        f"Assunto: {subject}\n"
+        f"Classificação: {classification}\n"
+        f"{sep}\n"
+        f"{draft}\n"
+        f"{sep}\n"
+        f"Responda com APROVADO para autorizar o envio desta resposta."
+    )
 
 
 def run(gmail=None, sheets=None, claude=None, dry_run: bool = False) -> None:
@@ -71,6 +88,9 @@ def run(gmail=None, sheets=None, claude=None, dry_run: bool = False) -> None:
         error_log = ""
         classification = ""
         draft_created = False
+        notification_sent = False
+        notification_thread_id = ""
+        draft_body = ""
 
         try:
             prompt = EMAIL_TRIAGE_PROMPT.format(
@@ -84,14 +104,14 @@ def run(gmail=None, sheets=None, claude=None, dry_run: bool = False) -> None:
             )
 
             raw_text = response.content[0].text
-            classification, draft = _parse_response(raw_text)
+            classification, draft_body = _parse_response(raw_text)
 
             print(f"[email_triage] From    : {msg['from']}")
             print(f"[email_triage] Subject : {msg['subject']}")
             print(f"[email_triage] Class   : {classification}")
 
             if dry_run:
-                print(f"[email_triage] --- DRAFT (dry run) ---\n{draft}\n")
+                print(f"[email_triage] --- DRAFT (dry run) ---\n{draft_body}\n")
             else:
                 to_address = _extract_email(msg["from"])
                 subject = _reply_subject(msg["subject"])
@@ -99,10 +119,41 @@ def run(gmail=None, sheets=None, claude=None, dry_run: bool = False) -> None:
                 draft_created = gmail.create_draft(
                     to=to_address,
                     subject=subject,
-                    body=draft,
+                    body=draft_body,
                     thread_id=msg.get("thread_id"),
                 )
                 gmail.mark_as_read(msg["id"])
+
+                if draft_created and APPROVER_EMAILS:
+                    notification_subject = f"[APROVACAO PENDENTE] {classification} — {msg['subject']}"
+                    notification_body = _build_notification_body(
+                        from_field=msg["from"],
+                        subject=msg["subject"],
+                        classification=classification,
+                        draft=draft_body,
+                    )
+                    notification_thread_id = gmail.send_email(
+                        to=", ".join(APPROVER_EMAILS),
+                        subject=notification_subject,
+                        body=notification_body,
+                    )
+                    notification_sent = bool(notification_thread_id)
+                    print(f"[email_triage] Notification sent | message_id={notification_thread_id}")
+                elif draft_created:
+                    print("[email_triage] WARNING: APPROVER_EMAILS is empty — notification skipped.")
+
+                if sheets is not None and draft_created:
+                    sheets.append_row("email_log", [
+                        timestamp,
+                        msg.get("from", ""),
+                        msg.get("subject", ""),
+                        classification,
+                        draft_body,
+                        "TRUE" if notification_sent else "FALSE",
+                        notification_thread_id,
+                        "FALSE",
+                        "FALSE",
+                    ])
 
         except Exception as e:
             error_log = str(e)
