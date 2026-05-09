@@ -17,8 +17,7 @@ from agents.press_kit import (
     _build_release_data,
     _parse_blocks,
     _format_file_content,
-    _drive_service,
-    _upload_press_kit,
+    _save_press_kit,
 )
 
 MOCK_RELEASE = {
@@ -61,7 +60,7 @@ def _print_blocks(row: dict, blurb: str, release_notes: str, social_caption: str
     print()
 
 
-def _drive_path(row: dict) -> str:
+def _local_path(row: dict) -> str:
     nome_artista = str(row.get("nome_artista", "")).strip()
     titulo_track = str(row.get("titulo_track", "")).strip()
     data_lancamento = str(row.get("data_lancamento", "")).strip()
@@ -72,7 +71,7 @@ def _drive_path(row: dict) -> str:
     year = dt.strftime("%Y")
     month = dt.strftime("%m")
     safe_name = f"{nome_artista}_{titulo_track}_{data_lancamento}".replace(" ", "_").replace("/", "-").lower()
-    return f"balters_press_kits/{year}/{month}/{safe_name}.txt"
+    return f"press_kits/{year}/{month}/{safe_name}.txt"
 
 
 def run_mock() -> None:
@@ -80,7 +79,7 @@ def run_mock() -> None:
     claude = anthropic.Anthropic()
     blurb, release_notes, social_caption = _generate(MOCK_RELEASE, claude)
     _print_blocks(MOCK_RELEASE, blurb, release_notes, social_caption)
-    print(f"Drive file would be created: {_drive_path(MOCK_RELEASE)}")
+    print(f"Local file would be saved: {_local_path(MOCK_RELEASE)}")
 
 
 def run_dry() -> None:
@@ -110,7 +109,7 @@ def run_dry() -> None:
         try:
             blurb, release_notes, social_caption = _generate(row, claude)
             _print_blocks(row, blurb, release_notes, social_caption)
-            print(f"Drive file would be created: {_drive_path(row)}")
+            print(f"Local file would be saved: {_local_path(row)}")
         except Exception as e:
             print(f"ERROR on row {row.get('_row_index')}: {e}")
 
@@ -159,20 +158,24 @@ def run_live() -> None:
     filename = f"{safe_name}.txt"
     file_content = _format_file_content(blurb, release_notes, social_caption)
 
-    drive = _drive_service()
-    drive_link = _upload_press_kit(drive, filename, file_content, year, month)
-    print(f"Drive file created: {drive_link}")
+    file_path = _save_press_kit(filename, file_content, year, month)
+    print(f"File saved: {file_path}")
 
     email_guilherme = os.getenv("EMAIL_GUILHERME")
     if email_guilherme:
         subject = f"Press Kit gerado — {titulo_track} · {nome_artista}"
         body = (
             f"Olá Guilherme,\n\n"
-            f"O press kit de '{titulo_track}' ({nome_artista}) foi gerado e está pronto para revisão.\n\n"
-            f"Acesse o arquivo no Google Drive:\n{drive_link}\n\n"
+            f"O press kit de '{titulo_track}' ({nome_artista}) foi gerado e está anexado a este email para revisão.\n\n"
             f"Equipe Balters Records"
         )
-        sent = gmail.send_email(to=email_guilherme, subject=subject, body=body)
+        sent = gmail.send_email_with_attachment(
+            to=email_guilherme,
+            subject=subject,
+            body=body,
+            attachment_content=file_content,
+            attachment_filename=filename,
+        )
         print(f"Email {'sent' if sent else 'FAILED'} → {email_guilherme}")
     else:
         print("EMAIL_GUILHERME not set — skipping email.")
