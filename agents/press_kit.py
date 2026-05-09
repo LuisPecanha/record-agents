@@ -1,9 +1,48 @@
 """Press kit agent. Reads release info from Google Sheets, uses Claude to generate a press release, artist bio, platform description and social media captions."""
 
 import os
+from datetime import datetime
+
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaInMemoryUpload
 
 from integrations.sheets_client import SHEET_LANCAMENTOS
 from prompts.prompts import PRESS_KIT_PROMPT
+
+_DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive"]
+
+
+def _drive_service():
+    creds_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_PATH", "balters_sheets_service_account.json")
+    creds = Credentials.from_service_account_file(creds_path, scopes=_DRIVE_SCOPES)
+    return build("drive", "v3", credentials=creds)
+
+
+def _get_or_create_folder(service, name: str, parent_id: str | None = None) -> str:
+    query = f"name='{name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+    if parent_id:
+        query += f" and '{parent_id}' in parents"
+    results = service.files().list(q=query, fields="files(id)").execute()
+    files = results.get("files", [])
+    if files:
+        return files[0]["id"]
+    metadata: dict = {"name": name, "mimeType": "application/vnd.google-apps.folder"}
+    if parent_id:
+        metadata["parents"] = [parent_id]
+    folder = service.files().create(body=metadata, fields="id").execute()
+    return folder["id"]
+
+
+def _upload_press_kit(service, filename: str, content: str, year: str, month: str) -> str:
+    root_id = _get_or_create_folder(service, "balters_press_kits")
+    year_id = _get_or_create_folder(service, year, parent_id=root_id)
+    month_id = _get_or_create_folder(service, month, parent_id=year_id)
+
+    metadata = {"name": filename, "parents": [month_id]}
+    media = MediaInMemoryUpload(content.encode("utf-8"), mimetype="text/plain")
+    file = service.files().create(body=metadata, media_body=media, fields="id,webViewLink").execute()
+    return file.get("webViewLink", "")
 
 
 def _build_release_data(row: dict) -> str:
@@ -23,7 +62,6 @@ def _parse_blocks(text: str) -> tuple[str, str, str]:
     blurb = ""
     release_notes = ""
     social_caption = ""
-
     parts = text.split("===")
     current = None
 
@@ -48,6 +86,15 @@ def _parse_blocks(text: str) -> tuple[str, str, str]:
     return blurb, release_notes, social_caption
 
 
+def _format_file_content(blurb: str, release_notes: str, social_caption: str) -> str:
+    sep = "=" * 60
+    return (
+        f"{sep}\nPRESS KIT BLURB\n{sep}\n{blurb}\n\n"
+        f"{sep}\nRELEASE NOTES\n{sep}\n{release_notes}\n\n"
+        f"{sep}\nSOCIAL CAPTION\n{sep}\n{social_caption}\n"
+    )
+
+
 def run(sheets=None, gmail=None, claude=None) -> None:
     print("\n" + "=" * 60)
     print("[press_kit] Run started")
@@ -67,6 +114,7 @@ def run(sheets=None, gmail=None, claude=None) -> None:
         row_number = row["_row_index"]
         nome_artista = str(row.get("nome_artista", "")).strip()
         titulo_track = str(row.get("titulo_track", "")).strip()
+        data_lancamento = str(row.get("data_lancamento", "")).strip()
 
         print(f"[press_kit] Processing row {row_number}: {nome_artista} — {titulo_track}")
 
@@ -82,28 +130,27 @@ def run(sheets=None, gmail=None, claude=None) -> None:
             blurb, release_notes, social_caption = _parse_blocks(response.content[0].text)  # type: ignore[union-attr]
             print(f"[press_kit] Claude response parsed — blurb: {len(blurb)} chars, notes: {len(release_notes)} chars, caption: {len(social_caption)} chars")
 
-            sheets.update_cell(SHEET_LANCAMENTOS, row_number, "presskit_blurb", blurb)
-            sheets.update_cell(SHEET_LANCAMENTOS, row_number, "release_notes", release_notes)
-            sheets.update_cell(SHEET_LANCAMENTOS, row_number, "social_caption", social_caption)
-            print(f"[press_kit] Sheet updated for row {row_number}")
+            try:
+                dt = datetime.strptime(data_lancamento, "%d/%m/%Y")
+            except ValueError:
+                dt = datetime.strptime(data_lancamento, "%Y-%m-%d")
+            year = dt.strftime("%Y")
+            month = dt.strftime("%m")
+
+            safe_name = f"{nome_artista}_{titulo_track}_{data_lancamento}".replace(" ", "_").replace("/", "-").lower()
+            filename = f"{safe_name}.txt"
+            file_content = _format_file_content(blurb, release_notes, social_caption)
+
+            drive = _drive_service()
+            drive_link = _upload_press_kit(drive, filename, file_content, year, month)
+            print(f"[press_kit] File uploaded to Drive: {drive_link}")
 
             if email_guilherme:
                 subject = f"Press Kit gerado — {titulo_track} · {nome_artista}"
                 body = (
                     f"Olá Guilherme,\n\n"
-                    f"O press kit abaixo foi gerado automaticamente e aguarda revisão.\n\n"
-                    f"{'='*60}\n"
-                    f"PRESS KIT BLURB\n"
-                    f"{'='*60}\n"
-                    f"{blurb}\n\n"
-                    f"{'='*60}\n"
-                    f"RELEASE NOTES\n"
-                    f"{'='*60}\n"
-                    f"{release_notes}\n\n"
-                    f"{'='*60}\n"
-                    f"SOCIAL CAPTION\n"
-                    f"{'='*60}\n"
-                    f"{social_caption}\n\n"
+                    f"O press kit de '{titulo_track}' ({nome_artista}) foi gerado e está pronto para revisão.\n\n"
+                    f"Acesse o arquivo no Google Drive:\n{drive_link}\n\n"
                     f"Equipe Balters Records"
                 )
                 sent = gmail.send_email(to=email_guilherme, subject=subject, body=body)
