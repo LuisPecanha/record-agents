@@ -13,6 +13,7 @@ if not api_key:
 
 import anthropic
 from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from integrations.sheets_client import SheetsClient
 from integrations.gmail_client import GmailClient
@@ -22,6 +23,7 @@ from agents.release_calendar import run as release_calendar_run
 from agents.demo_screening import run as demo_screening_run
 from agents.press_kit import run as press_kit_run
 from agents.draft_approval import run as draft_approval_run
+from agents.deadline_tracking import run_daily, run_weekly
 
 client = anthropic.Anthropic(api_key=api_key)
 
@@ -43,6 +45,18 @@ scheduler.add_job(release_calendar_run, "interval", minutes=60)
 scheduler.add_job(demo_screening_run, "interval", minutes=60)
 scheduler.add_job(press_kit_run, "interval", minutes=60)
 scheduler.add_job(draft_approval_run, "interval", minutes=15, kwargs={"gmail": gmail, "sheets": sheets})
+scheduler.add_job(
+    lambda: run_daily(sheets, gmail),
+    CronTrigger(hour=9, minute=0),
+    id="deadline_tracking_daily",
+    name="Deadline Tracking — Daily Alerts",
+)
+scheduler.add_job(
+    lambda: run_weekly(sheets, gmail),
+    CronTrigger(day_of_week="mon", hour=9, minute=0),
+    id="deadline_tracking_weekly",
+    name="Deadline Tracking — Weekly Summary",
+)
 
 print("[boot] Running all agents on startup...")
 email_triage_run(gmail=gmail, sheets=sheets, claude=claude)
