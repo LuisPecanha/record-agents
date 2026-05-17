@@ -132,7 +132,12 @@ def run_daily(sheets, gmail) -> None:
                 new_date = old_date + timedelta(days=delay_days)
                 dr_index = all_rows.index(dr) + 2
                 sheets.update_cell("deadlines", dr_index, "deadline", new_date.isoformat())
-                sheets.update_cell("deadlines", dr_index, "alerta_enviado", "FALSE")
+                if dr["alerta_enviado"] == "FALSE":
+                    sheets.update_cell("deadlines", dr_index, "alerta_enviado", "FALSE")
+                else:
+                    logger.debug(
+                        f"Skipping alerta_enviado reset for {dr['etapa']} — alert already sent this run"
+                    )
                 changes.append(f"  - {dr['etapa']}: {old_date} → {new_date}")
                 logger.info(
                     f"Cascaded {dr['etapa']} for {row['artista']} - {row['titulo']}: {old_date} → {new_date}"
