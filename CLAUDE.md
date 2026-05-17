@@ -1,5 +1,16 @@
 # Balters Agents — CLAUDE.md
 
+## WORKING RULES FOR THIS CHAT
+
+- Go step by step — don't write multiple things at once
+- Every prompt has one responsibility (atomic)
+- .env is never committed
+- Answer in English
+- Don't assume. Don't hide confusion. Surface tradeoffs.
+- Minimum code that solves the problem. Nothing speculative.
+- Touch only what you must. Clean up only your own mess.
+- Define success criteria. Loop until verified.
+
 ## Project
 
 AI automation system for Balters Records, an independent House/Indie Dance label. Six agents handle recurring operational tasks, orchestrated by APScheduler and powered by the Claude API.
