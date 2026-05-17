@@ -43,7 +43,9 @@ class SheetsClient:
     def get_rows(self, sheet_name: str) -> list[dict]:
         ws = self._worksheet(sheet_name)
         records = ws.get_all_records()
-        return [{**row, "_row_index": i + 2} for i, row in enumerate(records)]
+        rows = [{**row, "_row_index": i + 2} for i, row in enumerate(records)]
+        filtered = [r for r in rows if r.get("artista", "").strip()]
+        return filtered
 
     def append_row(self, sheet_name: str, row: dict) -> None:
         ws = self._worksheet(sheet_name)
