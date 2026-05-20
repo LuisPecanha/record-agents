@@ -22,8 +22,8 @@ from agents.press_kit import (
 
 MOCK_RELEASE = {
     "_row_index": 1,
-    "nome_artista": "IV_C",
-    "titulo_track": "Xablau",
+    "nome_artista": "Artista Teste",
+    "titulo_track": "Track Teste",
     "genero": "House",
     "data_lancamento": "28/06/2025",
     "descricao": "Track inspirada em sets noturnos de clube, com bumbo profundo e synths melancólicos",
