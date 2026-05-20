@@ -16,6 +16,17 @@ _DEADLINES = [
     ("Posts agendados nas redes", -3),
 ]
 
+_ETAPA_EMOJI = {
+    "Aprovação final da track": "🎧",
+    "Entrega para masterização": "🎚️",
+    "Master aprovada": "✅",
+    "Arte do single": "🎨",
+    "Entrega para distribuição": "📦",
+    "Envio de promos para DJs": "📢",
+    "Campanha de pré-save ativa": "🔗",
+    "Posts agendados nas redes": "📱",
+}
+
 _DATE_FORMATS = ("%d/%m/%Y", "%Y-%m-%d")
 
 
@@ -32,7 +43,7 @@ def _format_date(dt: datetime) -> str:
     return dt.strftime("%d/%m/%Y")
 
 
-def run(sheets=None, gmail=None, dry_run: bool = False) -> None:
+def run(sheets=None, gmail=None, calendar=None, dry_run: bool = False) -> None:
     mode = "DRY RUN" if dry_run else "LIVE"
     print(f"\n{'='*60}")
     print(f"[release_calendar] Run started | mode: {mode}")
@@ -71,6 +82,24 @@ def run(sheets=None, gmail=None, dry_run: bool = False) -> None:
             ]
 
             for dl in deadlines:
+                emoji = _ETAPA_EMOJI.get(dl["etapa"], "📅")
+                summary = f"[{emoji} {dl['etapa']}] {track} — {artist}"
+                description = f"Responsável: {dl.get('responsavel', '')}\nLançamento: {_format_date(release_date)}"
+                date_iso = datetime.strptime(dl["data"], "%d/%m/%Y").strftime("%Y-%m-%d")
+
+                if not dry_run and calendar is not None:
+                    try:
+                        event_id = calendar.create_event(summary=summary, date=date_iso, description=description)
+                        dl["calendar_event_id"] = event_id
+                        print(f"[release_calendar] Calendar event created: {summary} ({event_id})")
+                    except Exception as cal_err:
+                        print(f"[release_calendar] Calendar event FAILED for '{dl['etapa']}': {cal_err}")
+                        dl["calendar_event_id"] = ""
+                else:
+                    dl["calendar_event_id"] = ""
+                    if dry_run:
+                        print(f"[release_calendar] [DRY RUN] Would create calendar event: {summary}")
+
                 if dry_run:
                     print(f"[release_calendar] [DRY RUN] Would append deadline: {dl['etapa']} — {dl['data']}")
                 else:
