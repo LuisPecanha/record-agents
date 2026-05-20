@@ -41,6 +41,16 @@ def run_delete(event_id: str) -> None:
     print(f"Event deleted — ID: {event_id}")
 
 
+def run_purge() -> None:
+    client = CalendarClient()
+    events = client.list_events(time_min="2020-01-01T00:00:00Z", time_max="2030-01-01T00:00:00Z")
+    for event in events:
+        event_id = event["id"]
+        client.delete_event(event_id)
+        print(f"Deleted: {event.get('summary')} ({event_id})")
+    print(f"Purge complete — {len(events)} event(s) deleted")
+
+
 def run_live() -> None:
     from integrations.sheets_client import SheetsClient
     from integrations.gmail_client import GmailClient
@@ -60,6 +70,7 @@ def main() -> None:
     group.add_argument("--create", action="store_true", help="Create a test event for tomorrow.")
     group.add_argument("--delete", metavar="EVENT_ID", help="Delete the event with the given ID.")
     group.add_argument("--live", action="store_true", help="Full live run of release_calendar with real clients.")
+    group.add_argument("--purge", action="store_true", help="Delete all calendar events between 2020 and 2030.")
     args = parser.parse_args()
 
     if args.auth:
@@ -70,6 +81,8 @@ def main() -> None:
         run_delete(args.delete)
     elif args.live:
         run_live()
+    elif args.purge:
+        run_purge()
 
 
 if __name__ == "__main__":
