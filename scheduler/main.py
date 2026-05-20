@@ -28,12 +28,7 @@ from automations.deadline_tracking import run_daily, run_weekly
 
 client = anthropic.Anthropic(api_key=api_key)
 
-message = client.messages.create(
-    model="claude-sonnet-4-5",
-    max_tokens=64,
-    messages=[{"role": "user", "content": "Say hello from Balters Records agent system."}],
-)
-print(message.content[0].text)  # type: ignore[union-attr]
+print("[boot] Anthropic client initialized.")
 
 sheets = SheetsClient()
 gmail = GmailClient()
@@ -47,10 +42,10 @@ scheduler = BlockingScheduler()
 # it will block draft_approval_run (15 min interval) from firing on time.
 # This is acceptable at current volume. If it becomes a problem in production,
 # switch to BackgroundScheduler with coalescing enabled on the job store.
-scheduler.add_job(email_triage_run, "interval", minutes=60)
+scheduler.add_job(email_triage_run, "interval", minutes=60, kwargs={"gmail": gmail, "sheets": sheets, "claude": claude})
 scheduler.add_job(release_calendar_run, "interval", minutes=60, kwargs={"sheets": sheets, "gmail": gmail, "calendar": calendar})
-scheduler.add_job(demo_screening_run, "interval", minutes=60)
-scheduler.add_job(press_kit_run, "interval", minutes=60)
+scheduler.add_job(demo_screening_run, "interval", minutes=60, kwargs={"gmail": gmail, "sheets": sheets, "claude": claude})
+scheduler.add_job(press_kit_run, "interval", minutes=60, kwargs={"gmail": gmail, "sheets": sheets, "claude": claude})
 scheduler.add_job(draft_approval_run, "interval", minutes=15, kwargs={"gmail": gmail, "sheets": sheets})
 scheduler.add_job(
     lambda: run_daily(sheets, gmail, calendar),
