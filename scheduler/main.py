@@ -24,7 +24,7 @@ from agents.release_calendar import run as release_calendar_run
 from agents.demo_screening import run as demo_screening_run
 from agents.press_kit import run as press_kit_run
 from agents.draft_approval import run as draft_approval_run
-from agents.deadline_tracking import run_daily, run_weekly
+from automations.deadline_tracking import run_daily, run_weekly
 
 client = anthropic.Anthropic(api_key=api_key)
 
