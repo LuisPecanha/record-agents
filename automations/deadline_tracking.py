@@ -4,23 +4,7 @@ import logging
 import os
 from datetime import date, datetime, timedelta
 
-EMAIL_EQUIPE = os.getenv("EMAIL_EQUIPE")
-EMAIL_DESIGN = os.getenv("EMAIL_DESIGN")
-EMAIL_DISTRIBUTION = os.getenv("EMAIL_DISTRIBUTION")
-EMAIL_MASTERING = os.getenv("EMAIL_MASTERING")
-
 logger = logging.getLogger(__name__)
-
-ETAPA_TO_EMAIL = {
-    "Aprovação final da track": EMAIL_EQUIPE,
-    "Entrega para masterização": EMAIL_MASTERING,
-    "Master aprovada": EMAIL_MASTERING,
-    "Arte do single": EMAIL_DESIGN,
-    "Entrega para distribuição": EMAIL_DISTRIBUTION,
-    "Envio de promos para DJs": EMAIL_EQUIPE,
-    "Campanha de pré-save ativa": EMAIL_DESIGN,
-    "Posts agendados nas redes": EMAIL_DESIGN,
-}
 
 _ETAPA_EMOJI = {
     "Aprovação final da track": "🎧",
@@ -43,12 +27,26 @@ def _parse_date(value: str) -> date:
     raise ValueError(f"Unrecognized date format: '{value}'")
 
 
-def get_responsible(etapa: str) -> str | None:
-    return ETAPA_TO_EMAIL.get(etapa) or None
+def get_responsible(etapa: str, etapa_to_email: dict) -> str | None:
+    return etapa_to_email.get(etapa) or None
 
 
 def run_daily(sheets, gmail, calendar=None) -> None:
     """Runs alert logic and cascade logic for all rows in the deadlines tab."""
+    EMAIL_EQUIPE = os.getenv("EMAIL_EQUIPE")
+    EMAIL_DESIGN = os.getenv("EMAIL_DESIGN")
+    EMAIL_DISTRIBUTION = os.getenv("EMAIL_DISTRIBUTION")
+    EMAIL_MASTERING = os.getenv("EMAIL_MASTERING")
+    ETAPA_TO_EMAIL = {
+        "Aprovação final da track": EMAIL_EQUIPE,
+        "Entrega para masterização": EMAIL_MASTERING,
+        "Master aprovada": EMAIL_MASTERING,
+        "Arte do single": EMAIL_DESIGN,
+        "Entrega para distribuição": EMAIL_DISTRIBUTION,
+        "Envio de promos para DJs": EMAIL_EQUIPE,
+        "Campanha de pré-save ativa": EMAIL_DESIGN,
+        "Posts agendados nas redes": EMAIL_DESIGN,
+    }
     rows = sheets.get_rows("deadlines")
     today = date.today()
     cascaded_set: set[tuple[str, str]] = set()
@@ -74,7 +72,7 @@ def run_daily(sheets, gmail, calendar=None) -> None:
             )
 
             if approaching:
-                recipient = get_responsible(row["etapa"])
+                recipient = get_responsible(row["etapa"], ETAPA_TO_EMAIL)
                 if recipient is None:
                     logger.warning(f"No recipient for etapa '{row['etapa']}' — skipping approaching alert.")
                     continue
@@ -92,7 +90,7 @@ def run_daily(sheets, gmail, calendar=None) -> None:
                 logger.info(f"Approaching alert sent for {row['artista']} - {row['titulo']} / {row['etapa']}")
 
             if overdue:
-                recipient = get_responsible(row["etapa"])
+                recipient = get_responsible(row["etapa"], ETAPA_TO_EMAIL)
                 if recipient is None:
                     logger.warning(f"No recipient for etapa '{row['etapa']}' — skipping overdue alert.")
                     continue
@@ -198,6 +196,7 @@ def run_daily(sheets, gmail, calendar=None) -> None:
 
 def run_weekly(sheets, gmail) -> None:
     """Sends a weekly status summary email to EMAIL_EQUIPE every Monday."""
+    EMAIL_EQUIPE = os.getenv("EMAIL_EQUIPE")
     today = date.today()
     week_end = today + timedelta(days=7)
     rows = sheets.get_rows("deadlines")
