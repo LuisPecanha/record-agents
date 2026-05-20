@@ -3,11 +3,6 @@
 import logging
 import os
 from datetime import date, datetime, timedelta
-from pathlib import Path
-
-from dotenv import load_dotenv
-
-load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
 EMAIL_EQUIPE = os.getenv("EMAIL_EQUIPE")
 EMAIL_DESIGN = os.getenv("EMAIL_DESIGN")

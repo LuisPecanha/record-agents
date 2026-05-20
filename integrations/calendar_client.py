@@ -1,13 +1,9 @@
 """Google Calendar API client. No business logic."""
 
 import os
-from pathlib import Path
 
-from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
-
-load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
 _SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
