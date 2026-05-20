@@ -21,6 +21,7 @@ AI automation system for Balters Records, an independent House/Indie Dance label
 - Anthropic SDK — `claude-sonnet-4-5`
 - Gmail via IMAP/SMTP (App Password) — no OAuth
 - Google Sheets via `gspread` + Service Account JSON
+- Google Calendar via `googleapiclient` + Service Account JSON
 - APScheduler (`BlockingScheduler` + `CronTrigger`)
 - Deploy target: Railway
 
@@ -41,7 +42,7 @@ balters-agents/
 - `agents/` owns Balters business logic. `integrations/` owns API mechanics. They must stay separate.
 - `scheduler/main.py` inserts the project root into `sys.path` so `python scheduler/main.py` works from the repo root.
 - The scheduler pings the Claude API once at boot as a connectivity check, then starts the interval jobs.
-- Clients (sheets, gmail, claude) are instantiated once at boot and shared across all agents and scheduled jobs.
+- Clients (sheets, gmail, calendar, claude) are instantiated once at boot and shared across all agents and scheduled jobs.
 - Gmail auth uses App Password + IMAP/SMTP (imaplib/smtplib). No OAuth, no Google Cloud Console flow.
 - Sheets auth uses a Service Account JSON file. Path read from `GOOGLE_SERVICE_ACCOUNT_PATH` env var (default: `balters_sheets_service_account.json`).
 - `update_cell(sheet_name, row_index, col_name, value)` resolves columns by header name — never by numeric index.
@@ -66,10 +67,16 @@ balters-agents/
 
 ### integrations/sheets_client.py
 - `SheetsClient` — gspread + Service Account, connects to `GOOGLE_SHEETS_ID_RELEASES`
-- `get_rows(sheet_name)` — returns list of dicts with injected `_row_index` key (1-based, skips header)
+- `get_rows(sheet_name, anchor="artista")` — returns list of dicts with injected `_row_index` key (1-based, skips header); filters out rows where the `anchor` field is empty; callers pass `anchor="nome_artista"` for the lancamentos tab
 - `append_row(sheet_name, row)` — accepts dict keyed by column header; USER_ENTERED input option
 - `update_cell(sheet_name, row_index, col_name, value)` — resolves column by header name
 - Tab constants: `SHEET_LANCAMENTOS`, `SHEET_DEADLINES`, `SHEET_EMAIL_LOG`, `SHEET_DEMOS`
+
+### integrations/calendar_client.py
+- `CalendarClient` — Google Calendar API v3, Service Account auth, scope `https://www.googleapis.com/auth/calendar`
+- `create_event(summary, date, description)` — creates an all-day event; `date` is `YYYY-MM-DD`; returns the created event's `id`
+- `delete_event(event_id)` — deletes an event by ID
+- `list_events(time_min, time_max)` — returns list of event dicts from `items`; `singleEvents=True`, `orderBy="startTime"`; both params are ISO 8601 strings
 
 ### prompts/prompts.py
 - `EMAIL_TRIAGE_PROMPT` — classifies emails into DEMO/IMPRENSA/PARCERIA/BOOKING/OUTRO and generates a draft reply. Output: `CLASSIFICACAO: X` / `RASCUNHO: ...`
@@ -88,11 +95,13 @@ balters-agents/
 - `dry_run=True` skips all writes and prints parsed output
 
 ### agents/release_calendar.py
-- `run(sheets, gmail, dry_run)` — reads `lancamentos`, filters unprocessed rows
-- Calculates 8 deadlines from `data_lancamento` (accepts `DD/MM/YYYY` or `YYYY-MM-DD`)
-- Writes each deadline to `deadlines` tab
+- `run(sheets, gmail, calendar=None, dry_run=False)` — reads `lancamentos`, filters unprocessed rows
+- Calculates 8 deadlines from `data_lancamento` (accepts `DD/MM/YYYY` or `YYYY-MM-DD`) via `_parse_date()`
+- For each deadline: creates a Google Calendar all-day event (if `calendar` is not None); writes deadline row to `deadlines` tab
+- Calendar event summary format: `[{emoji} {etapa}] {track} — {artist}` using `_ETAPA_EMOJI` dict
 - Sends targeted emails: `EMAIL_DESIGN` (arte do single), `EMAIL_DISTRIBUTION` (entrega para distribuição), `EMAIL_EQUIPE` (full summary)
 - Marks release as processed (`processado = True`)
+- Deadline dict keys: `etapa`, `deadline` (DD/MM/YYYY), `artista`, `titulo`, `calendar_event_id`
 - Sheet columns: `nome_artista`, `titulo_track`, `data_lancamento`, `processado`
 
 ### agents/demo_screening.py
@@ -127,9 +136,11 @@ balters-agents/
 - Prints waiting log line if no qualifying reply yet
 
 ### agents/deadline_tracking.py
-- `run_daily(sheets, gmail)` — alert and cascade logic; no Claude call
+- `run_daily(sheets, gmail, calendar=None)` — alert and cascade logic; no Claude call
 - `run_weekly(sheets, gmail)` — weekly status summary email; no Claude call
 - Module-level `ETAPA_TO_EMAIL` dict mapping each deadline etapa to its responsible email address
+- Module-level `_ETAPA_EMOJI` dict mapping each etapa to an emoji (used for calendar event summaries)
+- `_parse_date(value)` helper — accepts `DD/MM/YYYY` or `YYYY-MM-DD`; returns `date` object
 - `get_responsible(etapa)` helper — returns email or None
 - **Alert logic** (run_daily, first pass over deadlines rows):
   - Approaching (0–3 days, Pendente, alerta_enviado=FALSE): sends email to responsible person
@@ -137,16 +148,17 @@ balters-agents/
   - Both set `alerta_enviado=TRUE` in sheet after sending
 - **Cascade logic** (run_daily, second pass):
   - Rows with `status=Atrasado`: shifts all downstream deadlines for the same release by delay_days
-  - Resets `alerta_enviado=FALSE` on shifted rows; sends cascade summary to `EMAIL_EQUIPE`
-  - `cascaded_set` prevents double-cascading a release in one run
+  - `alerta_enviado` reset to FALSE only if currently FALSE (skips if already TRUE — alert was sent this run)
+  - If `calendar` is not None and row has `calendar_event_id`: deletes old event and creates a new one at the shifted date; updates `calendar_event_id` in sheet
+  - Sends cascade summary to `EMAIL_EQUIPE`; `cascaded_set` prevents double-cascading a release in one run
 - **Weekly summary** (run_weekly): groups overdue, upcoming (7 days), and completed rows by release; sends formatted email to `EMAIL_EQUIPE`; skips if no active rows
 
 ## scheduler/main.py
-- Instantiates `SheetsClient`, `GmailClient`, and `anthropic.Anthropic` once at boot — shared across all agents
+- Instantiates `SheetsClient`, `GmailClient`, `CalendarClient`, and `anthropic.Anthropic` once at boot — shared across all agents
 - Runs email_triage, release_calendar, demo_screening, press_kit on boot; draft_approval and deadline_tracking do NOT run on boot
-- Interval jobs (60 min): email_triage, release_calendar, demo_screening, press_kit
+- Interval jobs (60 min): email_triage, demo_screening, press_kit; release_calendar passes `sheets`, `gmail`, `calendar` via `kwargs`
 - Interval job (15 min): draft_approval — passes `gmail` and `sheets` via `kwargs`
-- CronTrigger jobs: deadline_tracking daily at 09:00 and weekly on Monday at 09:00
+- CronTrigger jobs: deadline_tracking daily at 09:00 (passes `calendar`) and weekly on Monday at 09:00
 
 ## Manual test scripts
 
@@ -160,6 +172,7 @@ balters-agents/
 | `test_sheets_connection.py` | Verifies connection to all tabs |
 | `test_smtp.py` | Sends a test email to `EMAIL_EQUIPE` via SMTP |
 | `tests/test_draft_approval.py` | `--mock`, `--dry-run`, `--live` |
+| `tests/test_calendar_client.py` | `--auth` (list events), `--create` (test event), `--delete EVENT_ID`, `--purge` (delete all events 2020–2030), `--live` (full release_calendar run with real clients) |
 
 ## Environment variables
 
@@ -170,6 +183,7 @@ balters-agents/
 | `GMAIL_APP_PASSWORD` | GmailClient |
 | `GOOGLE_SERVICE_ACCOUNT_PATH` | SheetsClient (default: `balters_sheets_service_account.json`) |
 | `GOOGLE_SHEETS_ID_RELEASES` | SheetsClient |
+| `GOOGLE_CALENDAR_ID` | CalendarClient |
 | `APPROVER_EMAILS` | email_triage, draft_approval (comma-separated list) |
 | `EMAIL_EQUIPE` | release_calendar, deadline_tracking, test_smtp |
 | `EMAIL_DESIGN` | release_calendar, press_kit, deadline_tracking |
