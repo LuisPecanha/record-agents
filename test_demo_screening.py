@@ -211,8 +211,8 @@ def run_live() -> None:
             )
             print(f"Artist email {'sent' if sent else 'FAILED'} → {email_artista}")
 
-        email_matias = os.getenv("EMAIL_MATIAS")
-        email_ronaldo = os.getenv("EMAIL_RONALDO")
+        email_social = os.getenv("EMAIL_SOCIAL")
+        email_ar = os.getenv("EMAIL_AR")
         team_body = (
             "Nova demo aprovada na triagem automática.\n\n"
             f"Artista: {nome_artistico}\n"
@@ -223,7 +223,7 @@ def run_live() -> None:
             "A track aguarda escuta humana."
         )
         team_subject = f"[Demo APROVADO] {nome_artistico} — {genero}"
-        for recipient in [email_matias, email_ronaldo]:
+        for recipient in [email_social, email_ar]:
             if not recipient:
                 print("Skipping team notification — recipient env var not set.")
                 continue

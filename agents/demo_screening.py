@@ -34,8 +34,8 @@ def run(sheets=None, gmail=None, claude=None) -> None:
     print("[demo_screening] Run started")
     print("=" * 60)
 
-    email_matias = os.getenv("EMAIL_MATIAS")
-    email_ronaldo = os.getenv("EMAIL_RONALDO")
+    email_social = os.getenv("EMAIL_SOCIAL")
+    email_ar = os.getenv("EMAIL_AR")
 
     rows = sheets.get_rows(SHEET_DEMOS)
     pending = [
@@ -105,7 +105,7 @@ def run(sheets=None, gmail=None, claude=None) -> None:
                     "A track aguarda escuta humana."
                 )
                 team_subject = f"[Demo APROVADO] {nome_artistico} — {genero}"
-                for recipient in [email_matias, email_ronaldo]:
+                for recipient in [email_social, email_ar]:
                     if not recipient:
                         print("[demo_screening] Skipping team notification — recipient env var not set.")
                         continue

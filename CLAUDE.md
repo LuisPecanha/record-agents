@@ -91,7 +91,7 @@ balters-agents/
 - `run(sheets, gmail, dry_run)` — reads `lancamentos`, filters unprocessed rows
 - Calculates 8 deadlines from `data_lancamento` (accepts `DD/MM/YYYY` or `YYYY-MM-DD`)
 - Writes each deadline to `deadlines` tab
-- Sends targeted emails: `EMAIL_GUILHERME` (arte do single), `EMAIL_LUIS` (entrega para distribuição), `EMAIL_EQUIPE` (full summary)
+- Sends targeted emails: `EMAIL_DESIGN` (arte do single), `EMAIL_DISTRIBUTION` (entrega para distribuição), `EMAIL_EQUIPE` (full summary)
 - Marks release as processed (`processado = True`)
 - Sheet columns: `nome_artista`, `titulo_track`, `data_lancamento`, `processado`
 
@@ -102,7 +102,7 @@ balters-agents/
 - Parses `RESULTADO`, `MOTIVO`, `MENSAGEM_ARTISTA` from Claude response (multi-line aware)
 - Writes `resultado` and `motivo` back to sheet, marks `processado = True`
 - Email routing:
-  - **APROVADO**: sends `MENSAGEM_ARTISTA` to `email_artista`; sends team notification to `EMAIL_MATIAS` + `EMAIL_RONALDO`
+  - **APROVADO**: sends `MENSAGEM_ARTISTA` to `email_artista`; sends team notification to `EMAIL_SOCIAL` + `EMAIL_AR`
   - **REPROVADO**: sends `MENSAGEM_ARTISTA` to `email_artista`; no team notification
   - **INCOMPLETO**: sends `MENSAGEM_ARTISTA` to `email_artista` if present; warns if empty
 - Sheet columns: `timestamp`, `nome_artistico`, `genero`, `link_track`, `link_perfil`, `mensagem`, `email_artista`, `resultado`, `motivo`, `processado`
@@ -113,7 +113,7 @@ balters-agents/
 - Uses `claude-sonnet-4-5`, max_tokens=2000
 - Parses three output blocks by splitting on `===` delimiters
 - Saves generated copy as a `.txt` file to `press_kits/{year}/{month}/{filename}.txt` under the project root (creates dirs with `exist_ok=True`)
-- Sends email to `EMAIL_GUILHERME` with the `.txt` file attached via `send_email_with_attachment()`
+- Sends email to `EMAIL_DESIGN` with the `.txt` file attached via `send_email_with_attachment()`
 - Marks `processado_presskit = True`
 - Sheet columns used: `nome_artista`, `titulo_track`, `genero`, `data_lancamento`, `descricao`, `link_track`, `link_perfil`, `processado_presskit`
 
@@ -172,11 +172,11 @@ balters-agents/
 | `GOOGLE_SHEETS_ID_RELEASES` | SheetsClient |
 | `APPROVER_EMAILS` | email_triage, draft_approval (comma-separated list) |
 | `EMAIL_EQUIPE` | release_calendar, deadline_tracking, test_smtp |
-| `EMAIL_GUILHERME` | release_calendar, press_kit, deadline_tracking |
-| `EMAIL_LUIS` | release_calendar, deadline_tracking |
-| `EMAIL_BLUMEL` | deadline_tracking |
-| `EMAIL_MATIAS` | demo_screening |
-| `EMAIL_RONALDO` | demo_screening |
+| `EMAIL_DESIGN` | release_calendar, press_kit, deadline_tracking |
+| `EMAIL_DISTRIBUTION` | release_calendar, deadline_tracking |
+| `EMAIL_MASTERING` | deadline_tracking |
+| `EMAIL_SOCIAL` | demo_screening |
+| `EMAIL_AR` | demo_screening |
 
 ## Next steps
 

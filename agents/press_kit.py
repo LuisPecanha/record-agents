@@ -73,7 +73,7 @@ def run(sheets=None, gmail=None, claude=None) -> None:
     print("[press_kit] Run started")
     print("=" * 60)
 
-    email_guilherme = os.getenv("EMAIL_GUILHERME")
+    email_design = os.getenv("EMAIL_DESIGN")
 
     rows = sheets.get_rows(SHEET_LANCAMENTOS)
     pending = [
@@ -117,7 +117,7 @@ def run(sheets=None, gmail=None, claude=None) -> None:
             file_path = _save_press_kit(filename, file_content, year, month)
             print(f"[press_kit] File saved: {file_path}")
 
-            if email_guilherme:
+            if email_design:
                 subject = f"Press Kit gerado — {titulo_track} · {nome_artista}"
                 body = (
                     f"Olá Guilherme,\n\n"
@@ -125,15 +125,15 @@ def run(sheets=None, gmail=None, claude=None) -> None:
                     f"Equipe Balters Records"
                 )
                 sent = gmail.send_email_with_attachment(
-                    to=email_guilherme,
+                    to=email_design,
                     subject=subject,
                     body=body,
                     attachment_content=file_content,
                     attachment_filename=filename,
                 )
-                print(f"[press_kit] Email {'sent' if sent else 'FAILED'} → {email_guilherme}")
+                print(f"[press_kit] Email {'sent' if sent else 'FAILED'} → {email_design}")
             else:
-                print("[press_kit] EMAIL_GUILHERME not set — skipping email.")
+                print("[press_kit] EMAIL_DESIGN not set — skipping email.")
 
             sheets.update_cell(SHEET_LANCAMENTOS, row_number, "processado_presskit", True)
             print(f"[press_kit] Row {row_number} marked as processado_presskit=True\n")

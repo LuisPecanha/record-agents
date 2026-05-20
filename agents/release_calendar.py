@@ -49,8 +49,8 @@ def run(sheets=None, gmail=None, calendar=None, dry_run: bool = False) -> None:
     print(f"[release_calendar] Run started | mode: {mode}")
     print(f"{'='*60}")
 
-    email_guilherme = os.getenv("EMAIL_GUILHERME")
-    email_luis = os.getenv("EMAIL_LUIS")
+    email_design = os.getenv("EMAIL_DESIGN")
+    email_distribution = os.getenv("EMAIL_DISTRIBUTION")
     email_equipe = os.getenv("EMAIL_EQUIPE")
 
     rows = sheets.get_rows(SHEET_LANCAMENTOS, anchor="nome_artista")
@@ -118,12 +118,12 @@ def run(sheets=None, gmail=None, calendar=None, dry_run: bool = False) -> None:
 
             notifications = [
                 (
-                    email_guilherme,
+                    email_design,
                     f"[Balters] Arte do single — {artist}",
                     f"Olá Guilherme,\n\nO deadline para a arte do single de '{track}' ({artist}) é {arte_dl['deadline']}.\n\nEquipe Balters Records",
                 ),
                 (
-                    email_luis,
+                    email_distribution,
                     f"[Balters] Entrega para distribuição — {artist}",
                     f"Olá Luís,\n\nO deadline para entrega para distribuição de '{track}' ({artist}) é {entrega_dl['deadline']}.\n\nEquipe Balters Records",
                 ),

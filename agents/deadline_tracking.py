@@ -10,21 +10,21 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
 EMAIL_EQUIPE = os.getenv("EMAIL_EQUIPE")
-EMAIL_GUILHERME = os.getenv("EMAIL_GUILHERME")
-EMAIL_LUIS = os.getenv("EMAIL_LUIS")
-EMAIL_BLUMEL = os.getenv("EMAIL_BLUMEL")
+EMAIL_DESIGN = os.getenv("EMAIL_DESIGN")
+EMAIL_DISTRIBUTION = os.getenv("EMAIL_DISTRIBUTION")
+EMAIL_MASTERING = os.getenv("EMAIL_MASTERING")
 
 logger = logging.getLogger(__name__)
 
 ETAPA_TO_EMAIL = {
     "Aprovação final da track": EMAIL_EQUIPE,
-    "Entrega para masterização": EMAIL_BLUMEL,
-    "Master aprovada": EMAIL_BLUMEL,
-    "Arte do single": EMAIL_GUILHERME,
-    "Entrega para distribuição": EMAIL_LUIS,
+    "Entrega para masterização": EMAIL_MASTERING,
+    "Master aprovada": EMAIL_MASTERING,
+    "Arte do single": EMAIL_DESIGN,
+    "Entrega para distribuição": EMAIL_DISTRIBUTION,
     "Envio de promos para DJs": EMAIL_EQUIPE,
-    "Campanha de pré-save ativa": EMAIL_GUILHERME,
-    "Posts agendados nas redes": EMAIL_GUILHERME,
+    "Campanha de pré-save ativa": EMAIL_DESIGN,
+    "Posts agendados nas redes": EMAIL_DESIGN,
 }
 
 _ETAPA_EMOJI = {
