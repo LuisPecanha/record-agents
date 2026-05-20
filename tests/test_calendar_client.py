@@ -41,12 +41,25 @@ def run_delete(event_id: str) -> None:
     print(f"Event deleted — ID: {event_id}")
 
 
+def run_live() -> None:
+    from integrations.sheets_client import SheetsClient
+    from integrations.gmail_client import GmailClient
+    from integrations.calendar_client import CalendarClient
+    from agents.release_calendar import run
+
+    sheets = SheetsClient()
+    gmail = GmailClient()
+    calendar = CalendarClient()
+    run(sheets=sheets, gmail=gmail, calendar=calendar, dry_run=False)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Manual test for CalendarClient.")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--auth", action="store_true", help="Verify calendar auth and list upcoming events.")
     group.add_argument("--create", action="store_true", help="Create a test event for tomorrow.")
     group.add_argument("--delete", metavar="EVENT_ID", help="Delete the event with the given ID.")
+    group.add_argument("--live", action="store_true", help="Full live run of release_calendar with real clients.")
     args = parser.parse_args()
 
     if args.auth:
@@ -55,6 +68,8 @@ def main() -> None:
         run_create()
     elif args.delete:
         run_delete(args.delete)
+    elif args.live:
+        run_live()
 
 
 if __name__ == "__main__":
