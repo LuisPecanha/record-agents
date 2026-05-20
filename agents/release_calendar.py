@@ -77,7 +77,7 @@ def run(sheets=None, gmail=None, calendar=None, dry_run: bool = False) -> None:
 
         try:
             deadlines = [
-                {"etapa": stage, "data": _format_date(release_date + timedelta(days=offset)), "artista": artist, "track": track}
+                {"etapa": stage, "deadline": _format_date(release_date + timedelta(days=offset)), "artista": artist, "titulo": track}
                 for stage, offset in _DEADLINES
             ]
 
@@ -85,7 +85,7 @@ def run(sheets=None, gmail=None, calendar=None, dry_run: bool = False) -> None:
                 emoji = _ETAPA_EMOJI.get(dl["etapa"], "📅")
                 summary = f"[{emoji} {dl['etapa']}] {track} — {artist}"
                 description = f"Responsável: {dl.get('responsavel', '')}\nLançamento: {_format_date(release_date)}"
-                date_iso = datetime.strptime(dl["data"], "%d/%m/%Y").strftime("%Y-%m-%d")
+                date_iso = datetime.strptime(dl["deadline"], "%d/%m/%Y").strftime("%Y-%m-%d")
 
                 if not dry_run and calendar is not None:
                     try:
@@ -101,15 +101,15 @@ def run(sheets=None, gmail=None, calendar=None, dry_run: bool = False) -> None:
                         print(f"[release_calendar] [DRY RUN] Would create calendar event: {summary}")
 
                 if dry_run:
-                    print(f"[release_calendar] [DRY RUN] Would append deadline: {dl['etapa']} — {dl['data']}")
+                    print(f"[release_calendar] [DRY RUN] Would append deadline: {dl['etapa']} — {dl['deadline']}")
                 else:
                     sheets.append_row(SHEET_DEADLINES, dl)
-                    print(f"[release_calendar] Deadline written: {dl['etapa']} — {dl['data']}")
+                    print(f"[release_calendar] Deadline written: {dl['etapa']} — {dl['deadline']}")
 
             arte_dl = next(d for d in deadlines if d["etapa"] == "Arte do single")
             entrega_dl = next(d for d in deadlines if d["etapa"] == "Entrega para distribuição")
 
-            summary_lines = "\n".join(f"  {d['etapa']}: {d['data']}" for d in deadlines)
+            summary_lines = "\n".join(f"  {d['etapa']}: {d['deadline']}" for d in deadlines)
             summary_body = (
                 f"Novo lançamento processado: {artist} — {track}\n"
                 f"Data de lançamento: {_format_date(release_date)}\n\n"
@@ -120,12 +120,12 @@ def run(sheets=None, gmail=None, calendar=None, dry_run: bool = False) -> None:
                 (
                     email_guilherme,
                     f"[Balters] Arte do single — {artist}",
-                    f"Olá Guilherme,\n\nO deadline para a arte do single de '{track}' ({artist}) é {arte_dl['data']}.\n\nEquipe Balters Records",
+                    f"Olá Guilherme,\n\nO deadline para a arte do single de '{track}' ({artist}) é {arte_dl['deadline']}.\n\nEquipe Balters Records",
                 ),
                 (
                     email_luis,
                     f"[Balters] Entrega para distribuição — {artist}",
-                    f"Olá Luís,\n\nO deadline para entrega para distribuição de '{track}' ({artist}) é {entrega_dl['data']}.\n\nEquipe Balters Records",
+                    f"Olá Luís,\n\nO deadline para entrega para distribuição de '{track}' ({artist}) é {entrega_dl['deadline']}.\n\nEquipe Balters Records",
                 ),
                 (
                     email_equipe,
