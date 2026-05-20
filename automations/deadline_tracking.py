@@ -85,7 +85,7 @@ def run_daily(sheets, gmail, calendar=None) -> None:
                     f"Balters Records"
                 )
                 gmail.send_email(recipient, subject, body)
-                row_index = sheets.get_rows("deadlines").index(row) + 2
+                row_index = rows.index(row) + 2
                 sheets.update_cell("deadlines", row_index, "alerta_enviado", "TRUE")
                 logger.info(f"Approaching alert sent for {row['artista']} - {row['titulo']} / {row['etapa']}")
 
@@ -104,7 +104,7 @@ def run_daily(sheets, gmail, calendar=None) -> None:
                     f"Balters Records"
                 )
                 gmail.send_email(recipients_str, subject, body)
-                row_index = sheets.get_rows("deadlines").index(row) + 2
+                row_index = rows.index(row) + 2
                 sheets.update_cell("deadlines", row_index, "alerta_enviado", "TRUE")
                 logger.info(f"Overdue alert sent for {row['artista']} - {row['titulo']} / {row['etapa']}")
 
@@ -128,9 +128,8 @@ def run_daily(sheets, gmail, calendar=None) -> None:
             if delay_days <= 0:
                 continue
 
-            all_rows = sheets.get_rows("deadlines")
             downstream = [
-                r for r in all_rows
+                r for r in rows
                 if r["artista"] == row["artista"]
                 and r["titulo"] == row["titulo"]
                 and _parse_date(r["deadline"]) > deadline_date
@@ -143,7 +142,7 @@ def run_daily(sheets, gmail, calendar=None) -> None:
             for dr in downstream:
                 old_date = _parse_date(dr["deadline"])
                 new_date = old_date + timedelta(days=delay_days)
-                dr_index = all_rows.index(dr) + 2
+                dr_index = rows.index(dr) + 2
                 sheets.update_cell("deadlines", dr_index, "deadline", new_date.isoformat())
                 if dr["alerta_enviado"] == "FALSE":
                     sheets.update_cell("deadlines", dr_index, "alerta_enviado", "FALSE")
