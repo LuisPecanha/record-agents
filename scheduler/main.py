@@ -42,6 +42,11 @@ claude = client
 
 scheduler = BlockingScheduler()
 
+# NOTE: BlockingScheduler runs all jobs on a single thread — jobs cannot overlap.
+# If email_triage_run (60 min interval) takes longer than expected due to API latency,
+# it will block draft_approval_run (15 min interval) from firing on time.
+# This is acceptable at current volume. If it becomes a problem in production,
+# switch to BackgroundScheduler with coalescing enabled on the job store.
 scheduler.add_job(email_triage_run, "interval", minutes=60)
 scheduler.add_job(release_calendar_run, "interval", minutes=60, kwargs={"sheets": sheets, "gmail": gmail, "calendar": calendar})
 scheduler.add_job(demo_screening_run, "interval", minutes=60)
