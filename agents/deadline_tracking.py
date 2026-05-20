@@ -2,7 +2,7 @@
 
 import logging
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -39,6 +39,15 @@ _ETAPA_EMOJI = {
 }
 
 
+def _parse_date(value: str) -> date:
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(value.strip(), fmt).date()
+        except ValueError:
+            continue
+    raise ValueError(f"Unrecognized date format: '{value}'")
+
+
 def get_responsible(etapa: str) -> str | None:
     return ETAPA_TO_EMAIL.get(etapa) or None
 
@@ -52,7 +61,7 @@ def run_daily(sheets, gmail, calendar=None) -> None:
     # Alert logic pass
     for row in rows:
         try:
-            deadline_date = date.fromisoformat(row["deadline"])
+            deadline_date = _parse_date(row["deadline"])
 
             if row["status"] == "Concluído":
                 continue
@@ -113,7 +122,7 @@ def run_daily(sheets, gmail, calendar=None) -> None:
     # Cascade logic pass
     for row in rows:
         try:
-            deadline_date = date.fromisoformat(row["deadline"])
+            deadline_date = _parse_date(row["deadline"])
 
             if row["status"] != "Atrasado":
                 continue
@@ -131,7 +140,7 @@ def run_daily(sheets, gmail, calendar=None) -> None:
                 r for r in all_rows
                 if r["artista"] == row["artista"]
                 and r["titulo"] == row["titulo"]
-                and date.fromisoformat(r["deadline"]) > deadline_date
+                and _parse_date(r["deadline"]) > deadline_date
             ]
 
             if not downstream:
@@ -139,7 +148,7 @@ def run_daily(sheets, gmail, calendar=None) -> None:
 
             changes = []
             for dr in downstream:
-                old_date = date.fromisoformat(dr["deadline"])
+                old_date = _parse_date(dr["deadline"])
                 new_date = old_date + timedelta(days=delay_days)
                 dr_index = all_rows.index(dr) + 2
                 sheets.update_cell("deadlines", dr_index, "deadline", new_date.isoformat())
@@ -204,7 +213,7 @@ def run_weekly(sheets, gmail) -> None:
 
     for row in rows:
         try:
-            deadline_date = date.fromisoformat(row["deadline"])
+            deadline_date = _parse_date(row["deadline"])
             if row["status"] == "Pendente" and deadline_date < today:
                 overdue_rows.append(row)
             elif row["status"] == "Pendente" and today <= deadline_date <= week_end:
