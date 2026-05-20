@@ -53,7 +53,7 @@ def run(sheets=None, gmail=None, calendar=None, dry_run: bool = False) -> None:
     email_luis = os.getenv("EMAIL_LUIS")
     email_equipe = os.getenv("EMAIL_EQUIPE")
 
-    rows = sheets.get_rows(SHEET_LANCAMENTOS)
+    rows = sheets.get_rows(SHEET_LANCAMENTOS, anchor="nome_artista")
     pending = [
         r for r in rows
         if (r.get("processado") is False or str(r.get("processado", "")).strip().upper() == "FALSE")

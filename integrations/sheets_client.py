@@ -40,11 +40,11 @@ class SheetsClient:
             f"Available tabs: {available}"
         )
 
-    def get_rows(self, sheet_name: str) -> list[dict]:
+    def get_rows(self, sheet_name: str, anchor: str = "artista") -> list[dict]:
         ws = self._worksheet(sheet_name)
         records = ws.get_all_records()
         rows = [{**row, "_row_index": i + 2} for i, row in enumerate(records)]
-        filtered = [r for r in rows if r.get("artista", "").strip()]
+        filtered = [r for r in rows if r.get(anchor, "").strip()]
         return filtered
 
     def append_row(self, sheet_name: str, row: dict) -> None:
