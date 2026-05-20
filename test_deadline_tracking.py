@@ -12,7 +12,7 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
-from automations.deadline_tracking import run_daily, run_weekly, ETAPA_TO_EMAIL  # noqa: E402
+from automations.deadline_tracking import run_daily, run_weekly  # noqa: E402
 
 
 class MockSheets:
