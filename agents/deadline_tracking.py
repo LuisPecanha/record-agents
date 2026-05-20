@@ -27,12 +27,23 @@ ETAPA_TO_EMAIL = {
     "Posts agendados nas redes": EMAIL_GUILHERME,
 }
 
+_ETAPA_EMOJI = {
+    "Aprovação final da track": "🎧",
+    "Entrega para masterização": "🎚️",
+    "Master aprovada": "✅",
+    "Arte do single": "🎨",
+    "Entrega para distribuição": "📦",
+    "Envio de promos para DJs": "📢",
+    "Campanha de pré-save ativa": "🔗",
+    "Posts agendados nas redes": "📱",
+}
+
 
 def get_responsible(etapa: str) -> str | None:
     return ETAPA_TO_EMAIL.get(etapa) or None
 
 
-def run_daily(sheets, gmail) -> None:
+def run_daily(sheets, gmail, calendar=None) -> None:
     """Runs alert logic and cascade logic for all rows in the deadlines tab."""
     rows = sheets.get_rows("deadlines")
     today = date.today()
@@ -138,6 +149,25 @@ def run_daily(sheets, gmail) -> None:
                     logger.debug(
                         f"Skipping alerta_enviado reset for {dr['etapa']} — alert already sent this run"
                     )
+                if calendar is not None and dr.get("calendar_event_id"):
+                    try:
+                        calendar.delete_event(dr["calendar_event_id"])
+                        emoji = _ETAPA_EMOJI.get(dr["etapa"], "📅")
+                        summary = f"[{emoji} {dr['etapa']}] {dr['titulo']} — {dr['artista']}"
+                        description = f"Responsável: {dr.get('responsavel', '')}"
+                        new_event_id = calendar.create_event(
+                            summary=summary,
+                            date=new_date.isoformat(),
+                            description=description,
+                        )
+                        sheets.update_cell("deadlines", dr_index, "calendar_event_id", new_event_id)
+                        logger.info(
+                            f"Calendar event updated for {dr['etapa']} ({dr['artista']} - {dr['titulo']}): {new_event_id}"
+                        )
+                    except Exception as cal_err:
+                        logger.error(
+                            f"Calendar update FAILED for {dr['etapa']} ({dr['artista']} - {dr['titulo']}): {cal_err}"
+                        )
                 changes.append(f"  - {dr['etapa']}: {old_date} → {new_date}")
                 logger.info(
                     f"Cascaded {dr['etapa']} for {row['artista']} - {row['titulo']}: {old_date} → {new_date}"
