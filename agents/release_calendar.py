@@ -1,9 +1,10 @@
 """Release calendar agent. Reads new release submissions from Google Sheets, calculates 8 retroactive deadlines from the release date, creates events in Google Calendar and notifies the team."""
 
 import os
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from integrations.sheets_client import SHEET_LANCAMENTOS, SHEET_DEADLINES
+from integrations.utils import _parse_date
 
 _DEADLINES = [
     ("Aprovação final da track", -42),
@@ -27,19 +28,7 @@ _ETAPA_EMOJI = {
     "Posts agendados nas redes": "📱",
 }
 
-_DATE_FORMATS = ("%d/%m/%Y", "%Y-%m-%d")
-
-
-def _parse_date(value: str) -> datetime:
-    for fmt in _DATE_FORMATS:
-        try:
-            return datetime.strptime(value.strip(), fmt)
-        except ValueError:
-            continue
-    raise ValueError(f"Unrecognized date format: '{value}'. Expected DD/MM/YYYY or YYYY-MM-DD.")
-
-
-def _format_date(dt: datetime) -> str:
+def _format_date(dt) -> str:
     return dt.strftime("%d/%m/%Y")
 
 
@@ -85,7 +74,7 @@ def run(sheets=None, gmail=None, calendar=None, dry_run: bool = False) -> None:
                 emoji = _ETAPA_EMOJI.get(dl["etapa"], "📅")
                 summary = f"[{emoji} {dl['etapa']}] {track} — {artist}"
                 description = f"Responsável: {dl.get('responsavel', '')}\nLançamento: {_format_date(release_date)}"
-                date_iso = datetime.strptime(dl["deadline"], "%d/%m/%Y").strftime("%Y-%m-%d")
+                date_iso = _parse_date(dl["deadline"]).isoformat()
 
                 if not dry_run and calendar is not None:
                     try:

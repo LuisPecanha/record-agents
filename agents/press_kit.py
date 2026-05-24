@@ -1,9 +1,9 @@
 """Press kit agent. Reads release info from Google Sheets, uses Claude to generate a press release, artist bio, platform description and social media captions."""
 
 import os
-from datetime import datetime
 
 from integrations.sheets_client import SHEET_LANCAMENTOS
+from integrations.utils import _parse_date
 from prompts.prompts import PRESS_KIT_PROMPT
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -103,10 +103,7 @@ def run(sheets=None, gmail=None, claude=None) -> None:
             blurb, release_notes, social_caption = _parse_blocks(response.content[0].text)  # type: ignore[union-attr]
             print(f"[press_kit] Claude response parsed — blurb: {len(blurb)} chars, notes: {len(release_notes)} chars, caption: {len(social_caption)} chars")
 
-            try:
-                dt = datetime.strptime(data_lancamento, "%d/%m/%Y")
-            except ValueError:
-                dt = datetime.strptime(data_lancamento, "%Y-%m-%d")
+            dt = _parse_date(data_lancamento)
             year = dt.strftime("%Y")
             month = dt.strftime("%m")
 

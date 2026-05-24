@@ -2,7 +2,9 @@
 
 import logging
 import os
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
+
+from integrations.utils import _parse_date
 
 logger = logging.getLogger(__name__)
 
@@ -16,15 +18,6 @@ _ETAPA_EMOJI = {
     "Campanha de pré-save ativa": "🔗",
     "Posts agendados nas redes": "📱",
 }
-
-
-def _parse_date(value: str) -> date:
-    for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
-        try:
-            return datetime.strptime(value.strip(), fmt).date()
-        except ValueError:
-            continue
-    raise ValueError(f"Unrecognized date format: '{value}'")
 
 
 def get_responsible(etapa: str, etapa_to_email: dict) -> str | None:
