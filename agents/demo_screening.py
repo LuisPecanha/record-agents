@@ -1,4 +1,4 @@
-"""Demo screening agent. Reads demo submissions from Google Sheets, uses Claude to screen by objective criteria (genre match, links present, form completeness) and routes to 3 possible outcomes: approve, reject, or request more info."""
+"""Demo screening agent. Reads demo submissions from Google Sheets, screens by objective criteria (genre match, links present, form completeness) and routes to 3 possible outcomes: approve, reject, or request more info."""
 
 import os
 
@@ -11,6 +11,33 @@ _ARTIST_SUBJECTS = {
     "REPROVADO": "Sobre sua demo — Balters Records",
     "INCOMPLETO": "Sua submissão está incompleta — Balters Records",
 }
+
+_REJECTED_GENRES = frozenset({
+    "techno", "trance", "pop", "hip hop", "funk", "sertanejo",
+})
+
+_REPROVADO_TEMPLATE = (
+    "Olá,\n\n"
+    "Obrigado por enviar sua demo para a Balters Records.\n\n"
+    "Após análise dos critérios da submissão, o gênero declarado está fora do nosso foco atual — "
+    "House Music e Indie Dance.\n\n"
+    "Desejamos muito sucesso na sua carreira musical. "
+    "As portas continuam abertas para projetos dentro desse universo.\n\n"
+    "Equipe Balters Records"
+)
+
+
+def _evaluate_submission(nome_artistico: str, genero: str, link_track: str) -> tuple[str, str]:
+    """Evaluate objective criteria without calling Claude. Returns (resultado, motivo)."""
+    if not nome_artistico:
+        return "INCOMPLETO", "Campos obrigatórios ausentes: nome artístico"
+    if not link_track:
+        return "INCOMPLETO", "Campos obrigatórios ausentes: link da track"
+    genero_lower = genero.lower().strip()
+    for rejected in _REJECTED_GENRES:
+        if rejected in genero_lower:
+            return "REPROVADO", f"Gênero fora do escopo da Balters: {genero}"
+    return "APROVADO", "Critérios objetivos atendidos"
 
 
 def _send_artist_email(gmail, email_artista: str, resultado: str, mensagem_artista: str) -> None:
@@ -73,13 +100,14 @@ def run(sheets, gmail=None, claude=None) -> None:
         print(f"[demo_screening] Processing row {row_number}: {nome_artistico}")
 
         try:
-            if not nome_artistico or not link_track:
-                resultado = "INCOMPLETO"
-                motivo = "Campos obrigatórios ausentes: " + (
-                    "nome artístico" if not nome_artistico else "link da track"
-                )
+            resultado, motivo = _evaluate_submission(nome_artistico, genero, link_track)
+
+            if resultado == "INCOMPLETO":
                 mensagem_artista = ""
-                print(f"[demo_screening] Pre-check INCOMPLETO — {motivo}")
+                print(f"[demo_screening] Pre-screen INCOMPLETO — {motivo}")
+            elif resultado == "REPROVADO":
+                mensagem_artista = _REPROVADO_TEMPLATE
+                print(f"[demo_screening] Pre-screen REPROVADO — {motivo}")
             else:
                 prompt = DEMO_SCREENING_PROMPT.format(
                     nome_artistico=nome_artistico,
