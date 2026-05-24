@@ -80,12 +80,12 @@ def _process_release(release: dict, sheets, gmail, calendar, dry_run: bool, emai
         (
             email_design,
             f"[Balters] Arte do single — {artist}",
-            f"Olá Guilherme,\n\nO deadline para a arte do single de '{track}' ({artist}) é {arte_dl['deadline']}.\n\nEquipe Balters Records",
+            f"Olá equipe de design,\n\nO deadline para a arte do single de '{track}' ({artist}) é {arte_dl['deadline']}.\n\nEquipe Balters Records",
         ),
         (
             email_distribution,
             f"[Balters] Entrega para distribuição — {artist}",
-            f"Olá Luís,\n\nO deadline para entrega para distribuição de '{track}' ({artist}) é {entrega_dl['deadline']}.\n\nEquipe Balters Records",
+            f"Olá equipe de distribuição,\n\nO deadline para entrega para distribuição de '{track}' ({artist}) é {entrega_dl['deadline']}.\n\nEquipe Balters Records",
         ),
         (
             email_equipe,
