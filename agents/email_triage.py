@@ -62,7 +62,7 @@ def _process_message(msg: dict, gmail, sheets, claude, dry_run: bool, timestamp:
         )
 
         response = claude.messages.create(
-            model="claude-opus-4-5",
+            model="claude-sonnet-4-5",
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
