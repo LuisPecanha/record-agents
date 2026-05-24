@@ -7,6 +7,7 @@ from integrations.utils import _extract_email
 from prompts.prompts import EMAIL_TRIAGE_PROMPT
 
 _BODY_LIMIT = 3000  # caps API input cost and keeps email bodies well within the context window
+_SKIP_PATTERNS = ("no-reply", "noreply", "accounts.google.com", "googlecommunityteam")
 APPROVER_EMAILS = [e.strip() for e in os.getenv("APPROVER_EMAILS", "").split(",") if e.strip()]
 
 
@@ -146,11 +147,9 @@ def run(gmail=None, sheets=None, claude=None, dry_run: bool = False) -> None:
     messages = gmail.get_unread_messages()
     print(f"[email_triage] {len(messages)} unread message(s) to process.\n")
 
-    _skip_patterns = ("no-reply", "noreply", "accounts.google.com", "googlecommunityteam")
-
     for msg in messages:
         from_lower = msg.get("from", "").lower()
-        if any(pattern in from_lower for pattern in _skip_patterns):
+        if any(pattern in from_lower for pattern in _SKIP_PATTERNS):
             print(f"[email_triage] Skipping automated sender: {msg['from']}")
             gmail.mark_as_read(msg["id"])
             continue
