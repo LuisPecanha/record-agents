@@ -88,7 +88,7 @@ def run_dry() -> None:
         print(f"Client init failed: {e}")
         sys.exit(1)
 
-    rows = sheets.get_rows(SHEET_LANCAMENTOS)
+    rows = sheets.get_rows(SHEET_LANCAMENTOS, anchor="nome_artista")
     pending = [
         r for r in rows
         if str(r.get("nome_artista", "")).strip()
@@ -121,7 +121,7 @@ def run_live() -> None:
         print(f"Client init failed: {e}")
         sys.exit(1)
 
-    rows = sheets.get_rows(SHEET_LANCAMENTOS)
+    rows = sheets.get_rows(SHEET_LANCAMENTOS, anchor="nome_artista")
     pending = [
         r for r in rows
         if str(r.get("nome_artista", "")).strip()

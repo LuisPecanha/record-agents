@@ -53,7 +53,7 @@ def run(sheets, gmail=None, claude=None) -> None:
     email_social = os.getenv("EMAIL_SOCIAL")
     email_ar = os.getenv("EMAIL_AR")
 
-    rows = sheets.get_rows(SHEET_DEMOS)
+    rows = sheets.get_rows(SHEET_DEMOS, anchor="nome_artistico")
     pending = [
         r for r in rows
         if str(r.get("nome_artistico", "")).strip()

@@ -17,7 +17,7 @@ def run(gmail=None, sheets=None) -> None:
     if gmail is None:
         gmail = GmailClient()
 
-    rows = sheets.get_rows(SHEET_EMAIL_LOG)
+    rows = sheets.get_rows(SHEET_EMAIL_LOG, anchor="remetente")
     pending = [
         r for r in rows
         if str(r.get("notification_sent", "")).strip().upper() == "TRUE"

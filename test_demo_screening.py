@@ -100,7 +100,7 @@ def run_dry() -> None:
         print(f"Client init failed: {e}")
         sys.exit(1)
 
-    rows = sheets.get_rows(SHEET_DEMOS)
+    rows = sheets.get_rows(SHEET_DEMOS, anchor="nome_artistico")
     pending = [
         r for r in rows
         if str(r.get("nome_artistico", "")).strip()

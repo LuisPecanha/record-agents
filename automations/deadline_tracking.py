@@ -29,7 +29,7 @@ def run_daily(sheets, gmail, calendar=None) -> None:
         "Campanha de pré-save ativa": EMAIL_DESIGN,
         "Posts agendados nas redes": EMAIL_DESIGN,
     }
-    rows = sheets.get_rows("deadlines")
+    rows = sheets.get_rows("deadlines", anchor="artista")
     today = date.today()
     cascaded_set: set[tuple[str, str]] = set()
 
@@ -174,7 +174,7 @@ def run_weekly(sheets, gmail) -> None:
     EMAIL_EQUIPE = os.getenv("EMAIL_EQUIPE")
     today = date.today()
     week_end = today + timedelta(days=7)
-    rows = sheets.get_rows("deadlines")
+    rows = sheets.get_rows("deadlines", anchor="artista")
 
     overdue_rows: list[dict] = []
     upcoming_rows: list[dict] = []

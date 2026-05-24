@@ -66,7 +66,7 @@ def run_dry() -> None:
         print(f"[test_draft_approval] Client init failed: {e}")
         sys.exit(1)
 
-    rows = sheets.get_rows(SHEET_EMAIL_LOG)
+    rows = sheets.get_rows(SHEET_EMAIL_LOG, anchor="remetente")
     pending = [
         r for r in rows
         if str(r.get("notification_sent", "")).strip().upper() == "TRUE"
