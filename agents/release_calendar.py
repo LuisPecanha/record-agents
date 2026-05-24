@@ -22,6 +22,14 @@ def _format_date(dt) -> str:
     return dt.strftime("%d/%m/%Y")
 
 
+def _compute_deadlines(release_date, artist: str = "", track: str = "") -> list:
+    deadlines = []
+    for stage, offset in _DEADLINES:
+        dt = release_date + timedelta(days=offset)
+        deadlines.append({"etapa": stage, "deadline": _format_date(dt), "_date": dt, "artista": artist, "titulo": track})
+    return deadlines
+
+
 def _process_release(release: dict, sheets, gmail, calendar, dry_run: bool, email_design: str, email_distribution: str, email_equipe: str) -> None:
     row_index = release["_row_index"]
     artist = release.get("nome_artista", "Unknown")
@@ -36,10 +44,7 @@ def _process_release(release: dict, sheets, gmail, calendar, dry_run: bool, emai
         print(f"[release_calendar] Skipping row {row_index}: {e}")
         return
 
-    deadlines = []
-    for stage, offset in _DEADLINES:
-        dt = release_date + timedelta(days=offset)
-        deadlines.append({"etapa": stage, "deadline": _format_date(dt), "_date": dt, "artista": artist, "titulo": track})
+    deadlines = _compute_deadlines(release_date, artist, track)
 
     for dl in deadlines:
         emoji = ETAPA_EMOJI.get(dl["etapa"], "📅")
