@@ -58,13 +58,15 @@ def run(gmail=None, sheets=None) -> None:
             )
 
             if approved:
-                gmail.send_email(to=remetente, subject=assunto, body=rascunho)
+                sent = gmail.send_email(to=remetente, subject=assunto, body=rascunho)
 
-                row_number = row["_row_index"]
-                sheets.update_cell(SHEET_EMAIL_LOG, row_number, "aprovado", "TRUE")
-                sheets.update_cell(SHEET_EMAIL_LOG, row_number, "enviado", "TRUE")
-
-                print(f"[draft_approval] SENT → {remetente} | assunto: {assunto}")
+                if sent:
+                    row_number = row["_row_index"]
+                    sheets.update_cell(SHEET_EMAIL_LOG, row_number, "aprovado", "TRUE")
+                    sheets.update_cell(SHEET_EMAIL_LOG, row_number, "enviado", "TRUE")
+                    print(f"[draft_approval] SENT → {remetente} | assunto: {assunto}")
+                else:
+                    print(f"[draft_approval] SEND FAILED — sheet not updated → {remetente} | assunto: {assunto}")
             else:
                 print(f"[draft_approval] Aguardando aprovação → {remetente} | assunto: {assunto}")
 
