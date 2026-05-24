@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from integrations.utils import _extract_email
 from prompts.prompts import EMAIL_TRIAGE_PROMPT
 
-_BODY_LIMIT = 3000
+_BODY_LIMIT = 3000  # caps API input cost and keeps email bodies well within the context window
 APPROVER_EMAILS = [e.strip() for e in os.getenv("APPROVER_EMAILS", "").split(",") if e.strip()]
 
 
