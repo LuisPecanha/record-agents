@@ -35,16 +35,16 @@ def _process_release(release: dict, sheets, gmail, calendar, dry_run: bool, emai
         print(f"[release_calendar] Skipping row {row_index}: {e}")
         return
 
-    deadlines = [
-        {"etapa": stage, "deadline": _format_date(release_date + timedelta(days=offset)), "artista": artist, "titulo": track}
-        for stage, offset in _DEADLINES
-    ]
+    deadlines = []
+    for stage, offset in _DEADLINES:
+        dt = release_date + timedelta(days=offset)
+        deadlines.append({"etapa": stage, "deadline": _format_date(dt), "_date": dt, "artista": artist, "titulo": track})
 
     for dl in deadlines:
         emoji = ETAPA_EMOJI.get(dl["etapa"], "📅")
         summary = f"[{emoji} {dl['etapa']}] {track} — {artist}"
         description = f"Lançamento: {_format_date(release_date)}"
-        date_iso = _parse_date(dl["deadline"]).isoformat()
+        date_iso = dl["_date"].isoformat()
 
         if not dry_run and calendar is not None:
             try:
