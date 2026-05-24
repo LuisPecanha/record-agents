@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from integrations.sheets_client import SheetsClient, SHEET_LANCAMENTOS, SHEET_DEADLINES, SHEET_EMAIL_LOG
+from integrations.sheets_client import SheetsClient, SHEET_LANCAMENTOS, SHEET_DEADLINES, SHEET_EMAIL_LOG, SHEET_DEMOS
 
 failed = False
 
@@ -19,6 +19,7 @@ for tab, anchor in [
     (SHEET_LANCAMENTOS, "nome_artista"),
     (SHEET_DEADLINES, "artista"),
     (SHEET_EMAIL_LOG, "remetente"),
+    (SHEET_DEMOS, "nome_artistico"),
 ]:
     try:
         rows = client.get_rows(tab, anchor=anchor)
