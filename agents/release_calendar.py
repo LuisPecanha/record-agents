@@ -4,7 +4,7 @@ import os
 from datetime import timedelta
 
 from integrations.sheets_client import SHEET_LANCAMENTOS, SHEET_DEADLINES
-from integrations.utils import _parse_date
+from integrations.utils import _parse_date, ETAPA_EMOJI
 
 _DEADLINES = [
     ("Aprovação final da track", -42),
@@ -16,17 +16,6 @@ _DEADLINES = [
     ("Campanha de pré-save ativa", -7),
     ("Posts agendados nas redes", -3),
 ]
-
-_ETAPA_EMOJI = {
-    "Aprovação final da track": "🎧",
-    "Entrega para masterização": "🎚️",
-    "Master aprovada": "✅",
-    "Arte do single": "🎨",
-    "Entrega para distribuição": "📦",
-    "Envio de promos para DJs": "📢",
-    "Campanha de pré-save ativa": "🔗",
-    "Posts agendados nas redes": "📱",
-}
 
 def _format_date(dt) -> str:
     return dt.strftime("%d/%m/%Y")
@@ -71,7 +60,7 @@ def run(sheets=None, gmail=None, calendar=None, dry_run: bool = False) -> None:
             ]
 
             for dl in deadlines:
-                emoji = _ETAPA_EMOJI.get(dl["etapa"], "📅")
+                emoji = ETAPA_EMOJI.get(dl["etapa"], "📅")
                 summary = f"[{emoji} {dl['etapa']}] {track} — {artist}"
                 description = f"Responsável: {dl.get('responsavel', '')}\nLançamento: {_format_date(release_date)}"
                 date_iso = _parse_date(dl["deadline"]).isoformat()

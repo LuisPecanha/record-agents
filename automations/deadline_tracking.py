@@ -4,20 +4,9 @@ import logging
 import os
 from datetime import date, timedelta
 
-from integrations.utils import _parse_date
+from integrations.utils import _parse_date, ETAPA_EMOJI
 
 logger = logging.getLogger(__name__)
-
-_ETAPA_EMOJI = {
-    "Aprovação final da track": "🎧",
-    "Entrega para masterização": "🎚️",
-    "Master aprovada": "✅",
-    "Arte do single": "🎨",
-    "Entrega para distribuição": "📦",
-    "Envio de promos para DJs": "📢",
-    "Campanha de pré-save ativa": "🔗",
-    "Posts agendados nas redes": "📱",
-}
 
 
 def get_responsible(etapa: str, etapa_to_email: dict) -> str | None:
@@ -146,7 +135,7 @@ def run_daily(sheets, gmail, calendar=None) -> None:
                 if calendar is not None and dr.get("calendar_event_id"):
                     try:
                         calendar.delete_event(dr["calendar_event_id"])
-                        emoji = _ETAPA_EMOJI.get(dr["etapa"], "📅")
+                        emoji = ETAPA_EMOJI.get(dr["etapa"], "📅")
                         summary = f"[{emoji} {dr['etapa']}] {dr['titulo']} — {dr['artista']}"
                         description = f"Responsável: {dr.get('responsavel', '')}"
                         new_event_id = calendar.create_event(
