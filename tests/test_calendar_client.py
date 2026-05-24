@@ -5,6 +5,10 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from integrations.calendar_client import CalendarClient
