@@ -50,6 +50,92 @@ def _build_notification_body(from_field: str, subject: str, classification: str,
     )
 
 
+def _process_message(msg: dict, gmail, sheets, claude, dry_run: bool, timestamp: str) -> None:
+    error_log = ""
+    classification = ""
+    draft_created = False
+    notification_sent = False
+    notification_thread_id = ""
+    draft_body = ""
+
+    try:
+        prompt = EMAIL_TRIAGE_PROMPT.format(
+            **{**msg, "body": msg["body"][:_BODY_LIMIT]}
+        )
+
+        response = claude.messages.create(
+            model="claude-opus-4-5",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        raw_text = response.content[0].text
+        classification, draft_body = _parse_response(raw_text)
+
+        print(f"[email_triage] From    : {msg['from']}")
+        print(f"[email_triage] Subject : {msg['subject']}")
+        print(f"[email_triage] Class   : {classification}")
+
+        if dry_run:
+            print(f"[email_triage] --- DRAFT (dry run) ---\n{draft_body}\n")
+        else:
+            to_address = _extract_email(msg["from"])
+            subject = _reply_subject(msg["subject"])
+
+            draft_created = gmail.create_draft(
+                to=to_address,
+                subject=subject,
+                body=draft_body,
+                thread_id=msg.get("thread_id"),
+            )
+            gmail.mark_as_read(msg["id"])
+
+            if draft_created and APPROVER_EMAILS:
+                notification_subject = f"[APROVACAO PENDENTE] {classification} — {msg['subject']}"
+                notification_body = _build_notification_body(
+                    from_field=msg["from"],
+                    subject=msg["subject"],
+                    classification=classification,
+                    draft=draft_body,
+                )
+                notification_thread_id = gmail.send_email(
+                    to=", ".join(APPROVER_EMAILS),
+                    subject=notification_subject,
+                    body=notification_body,
+                )
+                notification_sent = bool(notification_thread_id)
+                print(f"[email_triage] Notification sent | message_id={notification_thread_id}")
+            elif draft_created:
+                print("[email_triage] WARNING: APPROVER_EMAILS is empty — notification skipped.")
+
+            if sheets is not None and draft_created:
+                sheets.append_row("email_log", {
+                    "data": timestamp,
+                    "remetente": msg.get("from", ""),
+                    "assunto": msg.get("subject", ""),
+                    "classificacao": classification,
+                    "rascunho": draft_body,
+                    "notification_sent": "TRUE" if notification_sent else "FALSE",
+                    "notification_thread_id": notification_thread_id,
+                    "aprovado": "FALSE",
+                    "enviado": "FALSE",
+                })
+
+    except Exception as e:
+        error_log = str(e)
+        print(f"[email_triage] ERROR processing message {msg.get('id')}: {e}")
+
+    print(
+        f"[email_triage] SHEETS LOG | "
+        f"ts={timestamp} | "
+        f"from={msg.get('from', '')} | "
+        f"subject={msg.get('subject', '')} | "
+        f"classification={classification} | "
+        f"draft_created={draft_created} | "
+        f"error={error_log or 'none'}"
+    )
+
+
 def run(gmail=None, sheets=None, claude=None, dry_run: bool = False) -> None:
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     mode = "DRY RUN" if dry_run else "LIVE"
@@ -78,89 +164,7 @@ def run(gmail=None, sheets=None, claude=None, dry_run: bool = False) -> None:
             gmail.mark_as_read(msg["id"])
             continue
 
-        error_log = ""
-        classification = ""
-        draft_created = False
-        notification_sent = False
-        notification_thread_id = ""
-        draft_body = ""
-
-        try:
-            prompt = EMAIL_TRIAGE_PROMPT.format(
-                **{**msg, "body": msg["body"][:_BODY_LIMIT]}
-            )
-
-            response = claude.messages.create(
-                model="claude-opus-4-5",
-                max_tokens=1024,
-                messages=[{"role": "user", "content": prompt}],
-            )
-
-            raw_text = response.content[0].text
-            classification, draft_body = _parse_response(raw_text)
-
-            print(f"[email_triage] From    : {msg['from']}")
-            print(f"[email_triage] Subject : {msg['subject']}")
-            print(f"[email_triage] Class   : {classification}")
-
-            if dry_run:
-                print(f"[email_triage] --- DRAFT (dry run) ---\n{draft_body}\n")
-            else:
-                to_address = _extract_email(msg["from"])
-                subject = _reply_subject(msg["subject"])
-
-                draft_created = gmail.create_draft(
-                    to=to_address,
-                    subject=subject,
-                    body=draft_body,
-                    thread_id=msg.get("thread_id"),
-                )
-                gmail.mark_as_read(msg["id"])
-
-                if draft_created and APPROVER_EMAILS:
-                    notification_subject = f"[APROVACAO PENDENTE] {classification} — {msg['subject']}"
-                    notification_body = _build_notification_body(
-                        from_field=msg["from"],
-                        subject=msg["subject"],
-                        classification=classification,
-                        draft=draft_body,
-                    )
-                    notification_thread_id = gmail.send_email(
-                        to=", ".join(APPROVER_EMAILS),
-                        subject=notification_subject,
-                        body=notification_body,
-                    )
-                    notification_sent = bool(notification_thread_id)
-                    print(f"[email_triage] Notification sent | message_id={notification_thread_id}")
-                elif draft_created:
-                    print("[email_triage] WARNING: APPROVER_EMAILS is empty — notification skipped.")
-
-                if sheets is not None and draft_created:
-                    sheets.append_row("email_log", {
-                        "data": timestamp,
-                        "remetente": msg.get("from", ""),
-                        "assunto": msg.get("subject", ""),
-                        "classificacao": classification,
-                        "rascunho": draft_body,
-                        "notification_sent": "TRUE" if notification_sent else "FALSE",
-                        "notification_thread_id": notification_thread_id,
-                        "aprovado": "FALSE",
-                        "enviado": "FALSE",
-                    })
-
-        except Exception as e:
-            error_log = str(e)
-            print(f"[email_triage] ERROR processing message {msg.get('id')}: {e}")
-
-        print(
-            f"[email_triage] SHEETS LOG | "
-            f"ts={timestamp} | "
-            f"from={msg.get('from', '')} | "
-            f"subject={msg.get('subject', '')} | "
-            f"classification={classification} | "
-            f"draft_created={draft_created} | "
-            f"error={error_log or 'none'}"
-        )
+        _process_message(msg, gmail, sheets, claude, dry_run, timestamp)
         print()
 
     print(f"[email_triage] Run complete.\n")
