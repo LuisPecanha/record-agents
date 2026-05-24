@@ -6,6 +6,7 @@ from datetime import timedelta
 from integrations.sheets_client import SHEET_LANCAMENTOS, SHEET_DEADLINES
 from integrations.utils import _parse_date, ETAPA_EMOJI
 
+# days before release date
 _DEADLINES = [
     ("Aprovação final da track", -42),
     ("Entrega para masterização", -35),
