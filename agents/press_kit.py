@@ -117,7 +117,7 @@ def run(sheets, gmail=None, claude=None) -> None:
             if email_design:
                 subject = f"Press Kit gerado — {titulo_track} · {nome_artista}"
                 body = (
-                    f"Olá Guilherme,\n\n"
+                    f"Olá equipe de design,\n\n"
                     f"O press kit de '{titulo_track}' ({nome_artista}) foi gerado e está anexado a este email para revisão.\n\n"
                     f"Equipe Balters Records"
                 )
