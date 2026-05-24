@@ -13,6 +13,7 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 from automations.deadline_tracking import run_daily, run_weekly  # noqa: E402
+from integrations.utils import _parse_date  # noqa: E402
 
 
 class MockSheets:
@@ -112,7 +113,7 @@ def run_dry() -> None:
 
     for row in rows:
         try:
-            deadline_date = date.fromisoformat(row["deadline"])
+            deadline_date = _parse_date(row["deadline"])
         except (ValueError, KeyError):
             print(f"[DRY-RUN] Skipping row with unparseable deadline: {row}")
             continue
@@ -189,7 +190,7 @@ def run_live() -> None:
         if row["status"] != "Pendente" or row["alerta_enviado"] != "FALSE":
             continue
         try:
-            deadline_date = date.fromisoformat(row["deadline"])
+            deadline_date = _parse_date(row["deadline"])
         except (ValueError, KeyError):
             continue
         days_until = (deadline_date - today).days
