@@ -43,11 +43,21 @@ class MockGmail:
         print(f"[MockGmail] mark_as_read called for UID: {uid}")
         return True
 
+    def send_email(self, to, subject, body):
+        print(f"[MockGmail] send_email called:")
+        print(f"  To      : {to}")
+        print(f"  Subject : {subject}")
+        return "<mock-notification-message-id@balters.com>"
+
 
 def run_dry():
     print("Mode: DRY RUN — real Gmail, no writes.\n")
+    import anthropic
     from agents.email_triage import run
-    run(dry_run=True)
+    from integrations.gmail_client import GmailClient
+    gmail = GmailClient()
+    claude = anthropic.Anthropic()
+    run(gmail=gmail, claude=claude, dry_run=True)
 
 
 def run_gmail_only():
@@ -64,8 +74,10 @@ def run_gmail_only():
 
 def run_mock():
     print("Mode: MOCK — fake email, mock Gmail, real Claude.\n")
+    import anthropic
     from agents.email_triage import run
-    run(gmail=MockGmail(), dry_run=False)
+    claude = anthropic.Anthropic()
+    run(gmail=MockGmail(), claude=claude, dry_run=False)
 
 
 def run_live():
@@ -74,8 +86,12 @@ def run_live():
     if confirm != "YES":
         print("Aborted.")
         return
+    import anthropic
     from agents.email_triage import run
-    run(dry_run=False)
+    from integrations.gmail_client import GmailClient
+    gmail = GmailClient()
+    claude = anthropic.Anthropic()
+    run(gmail=gmail, claude=claude, dry_run=False)
 
 
 def main():

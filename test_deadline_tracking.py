@@ -8,7 +8,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
@@ -19,7 +19,7 @@ class MockSheets:
     def __init__(self, rows: list[dict]) -> None:
         self.rows = rows
 
-    def get_rows(self, tab: str) -> list[dict]:
+    def get_rows(self, tab: str, anchor: str | None = None) -> list[dict]:
         return self.rows
 
     def update_cell(self, tab: str, row_index: int, col: str, value: str) -> None:
@@ -100,7 +100,7 @@ def run_dry() -> None:
         print(f"Client init failed: {e}")
         sys.exit(1)
 
-    rows = sheets.get_rows("deadlines")
+    rows = sheets.get_rows("deadlines", anchor="artista")
     today = date.today()
     week_end = today + timedelta(days=7)
 
@@ -181,7 +181,7 @@ def run_live() -> None:
         print(f"Client init failed: {e}")
         sys.exit(1)
 
-    rows = sheets.get_rows("deadlines")
+    rows = sheets.get_rows("deadlines", anchor="artista")
     today = date.today()
 
     eligible = None
