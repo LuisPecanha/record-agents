@@ -3,8 +3,6 @@
 import argparse
 import os
 import sys
-from datetime import datetime
-
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,6 +10,7 @@ load_dotenv()
 import anthropic
 from integrations.sheets_client import SheetsClient, SHEET_LANCAMENTOS
 from integrations.gmail_client import GmailClient
+from integrations.utils import _parse_date
 from prompts.prompts import PRESS_KIT_PROMPT
 from agents.press_kit import (
     _build_release_data,
@@ -64,10 +63,7 @@ def _local_path(row: dict) -> str:
     nome_artista = str(row.get("nome_artista", "")).strip()
     titulo_track = str(row.get("titulo_track", "")).strip()
     data_lancamento = str(row.get("data_lancamento", "")).strip()
-    try:
-        dt = datetime.strptime(data_lancamento, "%d/%m/%Y")
-    except ValueError:
-        dt = datetime.strptime(data_lancamento, "%Y-%m-%d")
+    dt = _parse_date(data_lancamento)
     year = dt.strftime("%Y")
     month = dt.strftime("%m")
     safe_name = f"{nome_artista}_{titulo_track}_{data_lancamento}".replace(" ", "_").replace("/", "-").lower()
@@ -147,10 +143,7 @@ def run_live() -> None:
     blurb, release_notes, social_caption = _generate(row, claude)
     _print_blocks(row, blurb, release_notes, social_caption)
 
-    try:
-        dt = datetime.strptime(data_lancamento, "%d/%m/%Y")
-    except ValueError:
-        dt = datetime.strptime(data_lancamento, "%Y-%m-%d")
+    dt = _parse_date(data_lancamento)
     year = dt.strftime("%Y")
     month = dt.strftime("%m")
 
