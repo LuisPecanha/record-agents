@@ -31,10 +31,11 @@ class SheetsClient:
         print(f"[SheetsClient] Connected to spreadsheet: {self._spreadsheet.title}")
 
     def _worksheet(self, sheet_name: str) -> gspread.Worksheet:
-        available = [ws.title for ws in self._spreadsheet.worksheets()]
-        for ws in self._spreadsheet.worksheets():
+        worksheets = self._spreadsheet.worksheets()
+        for ws in worksheets:
             if ws.title == sheet_name:
                 return ws
+        available = [ws.title for ws in worksheets]
         raise ValueError(
             f"Worksheet '{sheet_name}' not found. "
             f"Available tabs: {available}"
