@@ -3,9 +3,6 @@
 import os
 from datetime import datetime, timezone
 
-import anthropic
-
-from integrations.gmail_client import GmailClient
 from integrations.utils import _extract_email
 from prompts.prompts import EMAIL_TRIAGE_PROMPT
 
@@ -142,12 +139,6 @@ def run(gmail=None, sheets=None, claude=None, dry_run: bool = False) -> None:
     print(f"\n{'='*60}")
     print(f"[email_triage] Run started at {timestamp} | mode: {mode}")
     print(f"{'='*60}")
-
-    if gmail is None:
-        gmail = GmailClient()
-
-    if claude is None:
-        claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
     if sheets is None:
         print("[email_triage] sheets=None — Google Sheets logging skipped for this phase.")
