@@ -48,6 +48,12 @@ def _build_notification_body(from_field: str, subject: str, classification: str,
     )
 
 
+def _should_skip(from_field: str) -> bool:
+    """Return True if the sender matches an automated sender pattern."""
+    from_lower = from_field.lower()
+    return any(pattern in from_lower for pattern in _SKIP_PATTERNS)
+
+
 def _process_message(msg: dict, gmail, sheets, claude, dry_run: bool, timestamp: str) -> None:
     error_log = ""
     classification = ""
@@ -148,8 +154,7 @@ def run(gmail=None, sheets=None, claude=None, dry_run: bool = False) -> None:
     print(f"[email_triage] {len(messages)} unread message(s) to process.\n")
 
     for msg in messages:
-        from_lower = msg.get("from", "").lower()
-        if any(pattern in from_lower for pattern in _SKIP_PATTERNS):
+        if _should_skip(msg.get("from", "")):
             print(f"[email_triage] Skipping automated sender: {msg['from']}")
             gmail.mark_as_read(msg["id"])
             continue
