@@ -68,7 +68,7 @@ def _save_press_kit(filename: str, content: str, year: str, month: str) -> str:
     return file_path
 
 
-def run(sheets=None, gmail=None, claude=None) -> None:
+def run(sheets, gmail=None, claude=None) -> None:
     print("\n" + "=" * 60)
     print("[press_kit] Run started")
     print("=" * 60)

@@ -111,7 +111,7 @@ def _process_release(release: dict, sheets, gmail, calendar, dry_run: bool, emai
         print(f"[release_calendar] Row {row_index} marked as processado=S")
 
 
-def run(sheets=None, gmail=None, calendar=None, dry_run: bool = False) -> None:
+def run(sheets, gmail=None, calendar=None, dry_run: bool = False) -> None:
     mode = "DRY RUN" if dry_run else "LIVE"
     print(f"\n{'='*60}")
     print(f"[release_calendar] Run started | mode: {mode}")

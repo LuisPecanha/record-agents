@@ -29,7 +29,7 @@ def _parse_response(text: str) -> tuple[str, str, str]:
     return resultado, motivo, mensagem_artista
 
 
-def run(sheets=None, gmail=None, claude=None) -> None:
+def run(sheets, gmail=None, claude=None) -> None:
     print("\n" + "=" * 60)
     print("[demo_screening] Run started")
     print("=" * 60)
