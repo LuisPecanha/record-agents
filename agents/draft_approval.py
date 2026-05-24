@@ -1,19 +1,12 @@
 """Draft approval agent. Polls email_log for pending approvals, checks approver replies, and sends approved drafts."""
 
 import os
-import re
 
 from integrations.gmail_client import GmailClient
 from integrations.sheets_client import SHEET_EMAIL_LOG
+from integrations.utils import _extract_email
 
 APPROVER_EMAILS = [e.strip() for e in os.getenv("APPROVER_EMAILS", "").split(",") if e.strip()]
-
-
-def _extract_email(from_field: str) -> str:
-    match = re.search(r"<(.+?)>", from_field)
-    if match:
-        return match.group(1).strip()
-    return from_field.strip()
 
 
 def run(gmail=None, sheets=None) -> None:

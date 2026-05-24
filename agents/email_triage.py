@@ -1,12 +1,12 @@
 """Email triage agent. Reads the Balters inbox, uses Claude to classify each email as DEMO / IMPRENSA / PARCERIA / BOOKING / OUTRO, and creates a draft reply in Gmail."""
 
 import os
-import re
 from datetime import datetime, timezone
 
 import anthropic
 
 from integrations.gmail_client import GmailClient
+from integrations.utils import _extract_email
 from prompts.prompts import EMAIL_TRIAGE_PROMPT
 
 _BODY_LIMIT = 3000
@@ -26,13 +26,6 @@ def _parse_response(text: str) -> tuple[str, str]:
         draft = text.split("RASCUNHO:", 1)[1].strip()
 
     return classification, draft
-
-
-def _extract_email(from_field: str) -> str:
-    match = re.search(r"<(.+?)>", from_field)
-    if match:
-        return match.group(1).strip()
-    return from_field.strip()
 
 
 def _reply_subject(subject: str) -> str:
