@@ -123,7 +123,7 @@ def run(sheets=None, gmail=None, calendar=None, dry_run: bool = False) -> None:
     rows = sheets.get_rows(SHEET_LANCAMENTOS, anchor="nome_artista")
     pending = [
         r for r in rows
-        if (r.get("processado") is False or str(r.get("processado", "")).strip().upper() == "FALSE")
+        if str(r.get("processado", "")).strip().upper() != "TRUE"
         and str(r.get("nome_artista", "")).strip()
     ]
     print(f"[release_calendar] {len(pending)} unprocessed release(s) found.\n")
