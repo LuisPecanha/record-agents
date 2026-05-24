@@ -1,16 +1,16 @@
 """Manual test for the demo screening agent."""
 
-import os
 import sys
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
+import anthropic
 from integrations.sheets_client import SheetsClient, SHEET_DEMOS
 from integrations.gmail_client import GmailClient
 from prompts.prompts import DEMO_SCREENING_PROMPT
-import anthropic
+from agents.demo_screening import _parse_response, run as agent_run
 
 MOCK_SUBMISSIONS = [
     {
@@ -43,30 +43,7 @@ MOCK_SUBMISSIONS = [
 ]
 
 
-def _parse_response(text: str) -> tuple[str, str, str]:
-    resultado = ""
-    motivo = ""
-    mensagem_artista = ""
-    current_key = None
-
-    for line in text.split("\n"):
-        if line.startswith("RESULTADO:"):
-            current_key = "resultado"
-            resultado = line.split(":", 1)[1].strip()
-        elif line.startswith("MOTIVO:"):
-            current_key = "motivo"
-            motivo = line.split(":", 1)[1].strip()
-        elif line.startswith("MENSAGEM_ARTISTA:"):
-            current_key = "mensagem_artista"
-            mensagem_artista = line.split(":", 1)[1].strip()
-        elif current_key == "mensagem_artista":
-            mensagem_artista += "\n" + line
-
-    mensagem_artista = mensagem_artista.strip()
-    return resultado, motivo, mensagem_artista
-
-
-def _screen_submission(row: dict, claude) -> None:
+def _screen_row(row: dict, claude) -> None:
     nome_artistico = str(row.get("nome_artistico", "")).strip()
     genero = str(row.get("genero", "")).strip()
     link_track = str(row.get("link_track", "")).strip()
@@ -93,13 +70,11 @@ def _screen_submission(row: dict, claude) -> None:
         link_perfil=link_perfil,
         mensagem=mensagem,
     )
-
     response = claude.messages.create(
         model="claude-sonnet-4-5",
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}],
     )
-
     resultado, motivo, mensagem_artista = _parse_response(response.content[0].text)
     print(f"RESULTADO: {resultado}")
     print(f"MOTIVO: {motivo}")
@@ -112,7 +87,7 @@ def run_mock() -> None:
     claude = anthropic.Anthropic()
 
     for row in MOCK_SUBMISSIONS:
-        _screen_submission(row, claude)
+        _screen_row(row, claude)
 
 
 def run_dry() -> None:
@@ -139,11 +114,11 @@ def run_dry() -> None:
         return
 
     for row in pending:
-        _screen_submission(row, claude)
+        _screen_row(row, claude)
 
 
 def run_live() -> None:
-    print("Mode: LIVE — processes first unprocessed row, writes to Sheets, sends emails.\n")
+    print("Mode: LIVE — delegates to agents.demo_screening.run().\n")
 
     try:
         sheets = SheetsClient()
@@ -153,107 +128,7 @@ def run_live() -> None:
         print(f"Client init failed: {e}")
         sys.exit(1)
 
-    rows = sheets.get_rows(SHEET_DEMOS)
-    pending = [
-        r for r in rows
-        if str(r.get("nome_artistico", "")).strip()
-        and str(r.get("processado", "")).strip().upper() != "TRUE"
-    ]
-
-    if not pending:
-        print("No unprocessed submissions found.")
-        return
-
-    row = pending[0]
-    row_number = row["_row_index"]
-    nome_artistico = str(row.get("nome_artistico", "")).strip()
-    genero = str(row.get("genero", "")).strip()
-    link_track = str(row.get("link_track", "")).strip()
-    link_perfil = str(row.get("link_perfil", "")).strip()
-    mensagem = str(row.get("mensagem", "")).strip()
-    email_artista = str(row.get("email_artista", "")).strip()
-
-    print(f"Processing row {row_number}: {nome_artistico}\n")
-
-    if not nome_artistico or not link_track:
-        resultado = "INCOMPLETO"
-        motivo = "Campos obrigatórios ausentes: " + (
-            "nome artístico" if not nome_artistico else "link da track"
-        )
-        mensagem_artista = ""
-        print(f"Pre-check INCOMPLETO — {motivo}")
-    else:
-        prompt = DEMO_SCREENING_PROMPT.format(
-            nome_artistico=nome_artistico,
-            genero=genero,
-            link_track=link_track,
-            link_perfil=link_perfil,
-            mensagem=mensagem,
-        )
-        response = claude.messages.create(
-            model="claude-sonnet-4-5",
-            max_tokens=1024,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        resultado, motivo, mensagem_artista = _parse_response(response.content[0].text)
-        print(f"Claude result: {resultado} — {motivo}")
-
-    sheets.update_cell(SHEET_DEMOS, row_number, "resultado", resultado)
-    sheets.update_cell(SHEET_DEMOS, row_number, "motivo", motivo)
-    print(f"Sheet updated — resultado={resultado}, motivo={motivo}")
-
-    if resultado == "APROVADO":
-        if email_artista:
-            sent = gmail.send_email(
-                to=email_artista,
-                subject="Recebemos sua demo — Balters Records",
-                body=mensagem_artista,
-            )
-            print(f"Artist email {'sent' if sent else 'FAILED'} → {email_artista}")
-
-        email_social = os.getenv("EMAIL_SOCIAL")
-        email_ar = os.getenv("EMAIL_AR")
-        team_body = (
-            "Nova demo aprovada na triagem automática.\n\n"
-            f"Artista: {nome_artistico}\n"
-            f"Gênero: {genero}\n"
-            f"Track: {link_track}\n"
-            f"Perfil: {link_perfil}\n"
-            f"Email: {email_artista}\n\n"
-            "A track aguarda escuta humana."
-        )
-        team_subject = f"[Demo APROVADO] {nome_artistico} — {genero}"
-        for recipient in [email_social, email_ar]:
-            if not recipient:
-                print("Skipping team notification — recipient env var not set.")
-                continue
-            sent = gmail.send_email(to=recipient, subject=team_subject, body=team_body)
-            print(f"Team email {'sent' if sent else 'FAILED'} → {recipient}")
-
-    elif resultado == "REPROVADO":
-        if email_artista:
-            sent = gmail.send_email(
-                to=email_artista,
-                subject="Sobre sua demo — Balters Records",
-                body=mensagem_artista,
-            )
-            print(f"Artist email {'sent' if sent else 'FAILED'} → {email_artista}")
-        else:
-            print("AVISO: email_artista vazio — email ao artista não enviado.")
-
-    elif resultado == "INCOMPLETO":
-        if email_artista:
-            sent = gmail.send_email(
-                to=email_artista,
-                subject="Sua submissão está incompleta — Balters Records",
-                body=mensagem_artista,
-            )
-            print(f"Artist email {'sent' if sent else 'FAILED'} → {email_artista}")
-        else:
-            print("AVISO: email_artista vazio — email ao artista não enviado.")
-
-    sheets.update_cell(SHEET_DEMOS, row_number, "processado", True)
-    print(f"Row {row_number} marked as processado=True")
+    agent_run(sheets=sheets, gmail=gmail, claude=claude)
 
 
 if __name__ == "__main__":
