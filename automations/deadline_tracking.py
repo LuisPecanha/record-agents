@@ -131,7 +131,7 @@ def run_daily(sheets, gmail, calendar=None) -> None:
                         calendar.delete_event(dr["calendar_event_id"])
                         emoji = ETAPA_EMOJI.get(dr["etapa"], "📅")
                         summary = f"[{emoji} {dr['etapa']}] {dr['titulo']} — {dr['artista']}"
-                        description = f"Responsável: {dr.get('responsavel', '')}"
+                        description = ""
                         new_event_id = calendar.create_event(
                             summary=summary,
                             date=new_date.isoformat(),

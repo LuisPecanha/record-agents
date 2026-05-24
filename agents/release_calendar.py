@@ -43,7 +43,7 @@ def _process_release(release: dict, sheets, gmail, calendar, dry_run: bool, emai
     for dl in deadlines:
         emoji = ETAPA_EMOJI.get(dl["etapa"], "📅")
         summary = f"[{emoji} {dl['etapa']}] {track} — {artist}"
-        description = f"Responsável: {dl.get('responsavel', '')}\nLançamento: {_format_date(release_date)}"
+        description = f"Lançamento: {_format_date(release_date)}"
         date_iso = _parse_date(dl["deadline"]).isoformat()
 
         if not dry_run and calendar is not None:
