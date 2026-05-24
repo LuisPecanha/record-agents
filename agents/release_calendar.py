@@ -21,6 +21,95 @@ def _format_date(dt) -> str:
     return dt.strftime("%d/%m/%Y")
 
 
+def _process_release(release: dict, sheets, gmail, calendar, dry_run: bool, email_design: str, email_distribution: str, email_equipe: str) -> None:
+    row_index = release["_row_index"]
+    artist = release.get("nome_artista", "Unknown")
+    track = release.get("titulo_track", "Unknown")
+    raw_date = release.get("data_lancamento", "")
+
+    print(f"[release_calendar] Processing: {artist} — {track} (row {row_index})")
+
+    try:
+        release_date = _parse_date(raw_date)
+    except ValueError as e:
+        print(f"[release_calendar] Skipping row {row_index}: {e}")
+        return
+
+    deadlines = [
+        {"etapa": stage, "deadline": _format_date(release_date + timedelta(days=offset)), "artista": artist, "titulo": track}
+        for stage, offset in _DEADLINES
+    ]
+
+    for dl in deadlines:
+        emoji = ETAPA_EMOJI.get(dl["etapa"], "📅")
+        summary = f"[{emoji} {dl['etapa']}] {track} — {artist}"
+        description = f"Responsável: {dl.get('responsavel', '')}\nLançamento: {_format_date(release_date)}"
+        date_iso = _parse_date(dl["deadline"]).isoformat()
+
+        if not dry_run and calendar is not None:
+            try:
+                event_id = calendar.create_event(summary=summary, date=date_iso, description=description)
+                dl["calendar_event_id"] = event_id
+                print(f"[release_calendar] Calendar event created: {summary} ({event_id})")
+            except Exception as cal_err:
+                print(f"[release_calendar] Calendar event FAILED for '{dl['etapa']}': {cal_err}")
+                dl["calendar_event_id"] = ""
+        else:
+            dl["calendar_event_id"] = ""
+            if dry_run:
+                print(f"[release_calendar] [DRY RUN] Would create calendar event: {summary}")
+
+        if dry_run:
+            print(f"[release_calendar] [DRY RUN] Would append deadline: {dl['etapa']} — {dl['deadline']}")
+        else:
+            sheets.append_row(SHEET_DEADLINES, dl)
+            print(f"[release_calendar] Deadline written: {dl['etapa']} — {dl['deadline']}")
+
+    arte_dl = next(d for d in deadlines if d["etapa"] == "Arte do single")
+    entrega_dl = next(d for d in deadlines if d["etapa"] == "Entrega para distribuição")
+
+    summary_lines = "\n".join(f"  {d['etapa']}: {d['deadline']}" for d in deadlines)
+    summary_body = (
+        f"Novo lançamento processado: {artist} — {track}\n"
+        f"Data de lançamento: {_format_date(release_date)}\n\n"
+        f"Deadlines calculados:\n{summary_lines}"
+    )
+
+    notifications = [
+        (
+            email_design,
+            f"[Balters] Arte do single — {artist}",
+            f"Olá Guilherme,\n\nO deadline para a arte do single de '{track}' ({artist}) é {arte_dl['deadline']}.\n\nEquipe Balters Records",
+        ),
+        (
+            email_distribution,
+            f"[Balters] Entrega para distribuição — {artist}",
+            f"Olá Luís,\n\nO deadline para entrega para distribuição de '{track}' ({artist}) é {entrega_dl['deadline']}.\n\nEquipe Balters Records",
+        ),
+        (
+            email_equipe,
+            f"[Balters] Deadlines calculados — {artist} — {track}",
+            summary_body,
+        ),
+    ]
+
+    for to_addr, subject, body in notifications:
+        if not to_addr:
+            print(f"[release_calendar] Skipping notification — recipient env var not set (subject: {subject})")
+            continue
+        if dry_run:
+            print(f"[release_calendar] [DRY RUN] Would send email to {to_addr}: {subject}")
+        else:
+            sent = gmail.send_email(to=to_addr, subject=subject, body=body)
+            print(f"[release_calendar] Email {'sent' if sent else 'FAILED'} → {to_addr}: {subject}")
+
+    if dry_run:
+        print(f"[release_calendar] [DRY RUN] Would mark row {row_index} as processado=S")
+    else:
+        sheets.update_cell(SHEET_LANCAMENTOS, row_index, "processado", True)
+        print(f"[release_calendar] Row {row_index} marked as processado=S")
+
+
 def run(sheets=None, gmail=None, calendar=None, dry_run: bool = False) -> None:
     mode = "DRY RUN" if dry_run else "LIVE"
     print(f"\n{'='*60}")
@@ -40,97 +129,13 @@ def run(sheets=None, gmail=None, calendar=None, dry_run: bool = False) -> None:
     print(f"[release_calendar] {len(pending)} unprocessed release(s) found.\n")
 
     for release in pending:
-        row_index = release["_row_index"]
-        artist = release.get("nome_artista", "Unknown")
-        track = release.get("titulo_track", "Unknown")
-        raw_date = release.get("data_lancamento", "")
-
-        print(f"[release_calendar] Processing: {artist} — {track} (row {row_index})")
-
         try:
-            release_date = _parse_date(raw_date)
-        except ValueError as e:
-            print(f"[release_calendar] Skipping row {row_index}: {e}")
-            continue
-
-        try:
-            deadlines = [
-                {"etapa": stage, "deadline": _format_date(release_date + timedelta(days=offset)), "artista": artist, "titulo": track}
-                for stage, offset in _DEADLINES
-            ]
-
-            for dl in deadlines:
-                emoji = ETAPA_EMOJI.get(dl["etapa"], "📅")
-                summary = f"[{emoji} {dl['etapa']}] {track} — {artist}"
-                description = f"Responsável: {dl.get('responsavel', '')}\nLançamento: {_format_date(release_date)}"
-                date_iso = _parse_date(dl["deadline"]).isoformat()
-
-                if not dry_run and calendar is not None:
-                    try:
-                        event_id = calendar.create_event(summary=summary, date=date_iso, description=description)
-                        dl["calendar_event_id"] = event_id
-                        print(f"[release_calendar] Calendar event created: {summary} ({event_id})")
-                    except Exception as cal_err:
-                        print(f"[release_calendar] Calendar event FAILED for '{dl['etapa']}': {cal_err}")
-                        dl["calendar_event_id"] = ""
-                else:
-                    dl["calendar_event_id"] = ""
-                    if dry_run:
-                        print(f"[release_calendar] [DRY RUN] Would create calendar event: {summary}")
-
-                if dry_run:
-                    print(f"[release_calendar] [DRY RUN] Would append deadline: {dl['etapa']} — {dl['deadline']}")
-                else:
-                    sheets.append_row(SHEET_DEADLINES, dl)
-                    print(f"[release_calendar] Deadline written: {dl['etapa']} — {dl['deadline']}")
-
-            arte_dl = next(d for d in deadlines if d["etapa"] == "Arte do single")
-            entrega_dl = next(d for d in deadlines if d["etapa"] == "Entrega para distribuição")
-
-            summary_lines = "\n".join(f"  {d['etapa']}: {d['deadline']}" for d in deadlines)
-            summary_body = (
-                f"Novo lançamento processado: {artist} — {track}\n"
-                f"Data de lançamento: {_format_date(release_date)}\n\n"
-                f"Deadlines calculados:\n{summary_lines}"
-            )
-
-            notifications = [
-                (
-                    email_design,
-                    f"[Balters] Arte do single — {artist}",
-                    f"Olá Guilherme,\n\nO deadline para a arte do single de '{track}' ({artist}) é {arte_dl['deadline']}.\n\nEquipe Balters Records",
-                ),
-                (
-                    email_distribution,
-                    f"[Balters] Entrega para distribuição — {artist}",
-                    f"Olá Luís,\n\nO deadline para entrega para distribuição de '{track}' ({artist}) é {entrega_dl['deadline']}.\n\nEquipe Balters Records",
-                ),
-                (
-                    email_equipe,
-                    f"[Balters] Deadlines calculados — {artist} — {track}",
-                    summary_body,
-                ),
-            ]
-
-            for to_addr, subject, body in notifications:
-                if not to_addr:
-                    print(f"[release_calendar] Skipping notification — recipient env var not set (subject: {subject})")
-                    continue
-                if dry_run:
-                    print(f"[release_calendar] [DRY RUN] Would send email to {to_addr}: {subject}")
-                else:
-                    sent = gmail.send_email(to=to_addr, subject=subject, body=body)
-                    print(f"[release_calendar] Email {'sent' if sent else 'FAILED'} → {to_addr}: {subject}")
-
-            if dry_run:
-                print(f"[release_calendar] [DRY RUN] Would mark row {row_index} as processado=S")
-            else:
-                sheets.update_cell(SHEET_LANCAMENTOS, row_index, "processado", True)
-                print(f"[release_calendar] Row {row_index} marked as processado=S")
-
+            _process_release(release, sheets, gmail, calendar, dry_run, email_design, email_distribution, email_equipe)
         except Exception as e:
+            row_index = release["_row_index"]
+            artist = release.get("nome_artista", "Unknown")
+            track = release.get("titulo_track", "Unknown")
             print(f"[release_calendar] ERROR on row {row_index} ({artist} — {track}): {e}")
-
         print()
 
     print("[release_calendar] Run complete.\n")
