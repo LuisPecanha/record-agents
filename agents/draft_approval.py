@@ -60,15 +60,9 @@ def run(gmail=None, sheets=None) -> None:
             if approved:
                 gmail.send_email(to=remetente, subject=assunto, body=rascunho)
 
-                row_number = None
-                for r in rows:
-                    if str(r.get("notification_thread_id", "")).strip() == notification_thread_id:
-                        row_number = r["_row_index"]
-                        break
-
-                if row_number is not None:
-                    sheets.update_cell(SHEET_EMAIL_LOG, row_number, "aprovado", "TRUE")
-                    sheets.update_cell(SHEET_EMAIL_LOG, row_number, "enviado", "TRUE")
+                row_number = row["_row_index"]
+                sheets.update_cell(SHEET_EMAIL_LOG, row_number, "aprovado", "TRUE")
+                sheets.update_cell(SHEET_EMAIL_LOG, row_number, "enviado", "TRUE")
 
                 print(f"[draft_approval] SENT → {remetente} | assunto: {assunto}")
             else:
