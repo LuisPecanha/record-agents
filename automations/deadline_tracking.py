@@ -34,6 +34,7 @@ def run_daily(sheets, gmail, calendar=None) -> None:
     cascaded_set: set[tuple[str, str]] = set()
 
     # Alert logic pass
+    alert_failures = 0
     for row in rows:
         try:
             deadline_date = _parse_date(row["deadline"])
@@ -92,7 +93,10 @@ def run_daily(sheets, gmail, calendar=None) -> None:
 
         except Exception as e:
             logger.error(f"Error processing alert for row {row}: {e}")
-            continue
+            alert_failures += 1
+
+    if rows and alert_failures == len(rows):
+        raise RuntimeError(f"Alert loop failed on all {len(rows)} rows — likely a systematic bug")
 
     # Cascade logic pass
     for row in rows:
