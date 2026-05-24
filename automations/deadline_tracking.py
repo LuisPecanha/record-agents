@@ -126,12 +126,6 @@ def run_daily(sheets, gmail, calendar=None) -> None:
                 new_date = old_date + timedelta(days=delay_days)
                 dr_index = rows.index(dr) + 2
                 sheets.update_cell("deadlines", dr_index, "deadline", new_date.isoformat())
-                if dr["alerta_enviado"] == "FALSE":
-                    sheets.update_cell("deadlines", dr_index, "alerta_enviado", "FALSE")
-                else:
-                    logger.debug(
-                        f"Skipping alerta_enviado reset for {dr['etapa']} — alert already sent this run"
-                    )
                 if calendar is not None and dr.get("calendar_event_id"):
                     try:
                         calendar.delete_event(dr["calendar_event_id"])
