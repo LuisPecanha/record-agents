@@ -41,7 +41,9 @@ class SheetsClient:
             f"Available tabs: {available}"
         )
 
-    def get_rows(self, sheet_name: str, anchor: str = "artista") -> list[dict]:
+    def get_rows(self, sheet_name: str, anchor: str | None = None) -> list[dict]:
+        if anchor is None:
+            raise ValueError("anchor column name is required")
         ws = self._worksheet(sheet_name)
         records = ws.get_all_records()
         rows = [{**row, "_row_index": i + 2} for i, row in enumerate(records)]
