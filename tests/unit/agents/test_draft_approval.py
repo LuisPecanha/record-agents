@@ -126,21 +126,22 @@ def test_reply_is_approved_truthy_cases(body):
     "Ainda não tenho certeza.",
     "aprovei a resposta",   # "aprovei" does not contain "aprovado"
     "aprovação pendente",   # "aprovação" does not contain "aprovado"
-    "REPROVADO",            # "aprovado" is NOT a substring of "reprovado" — safe
+    "REPROVADO",            # "aprovado" is NOT a substring of "reprovado"
+    "Não aprovado",         # negation guard — accented form
+    "nao aprovado",         # negation guard — unaccented form
+    "Nao Aprovado",         # negation guard — mixed case
 ])
 def test_reply_is_approved_falsy_cases(body):
     assert _reply_is_approved({"body": body}) is False
 
 
 def test_reply_is_approved_reprovado_is_not_a_substring():
-    # Confirms "aprovado" does not appear inside "reprovado" — REPROVADO cannot
-    # accidentally trigger approval
     assert _reply_is_approved({"body": "REPROVADO"}) is False
 
 
-def test_reply_is_approved_negation_also_matches():
-    # "não aprovado" contains "aprovado" as a substring — documented behaviour
-    assert _reply_is_approved({"body": "Não aprovado"}) is True
+def test_reply_is_approved_negation_returns_false():
+    assert _reply_is_approved({"body": "Não aprovado"}) is False
+    assert _reply_is_approved({"body": "nao aprovado"}) is False
 
 
 def test_reply_is_approved_missing_body_key():

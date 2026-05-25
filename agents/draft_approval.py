@@ -25,8 +25,11 @@ def _is_approver_reply(reply: dict, approver_emails: list) -> bool:
 
 
 def _reply_is_approved(reply: dict) -> bool:
-    """Return True if the reply body contains the approval keyword."""
-    return "aprovado" in str(reply.get("body", "")).strip().lower()
+    """Return True if the reply body contains the approval keyword, not negated."""
+    body = str(reply.get("body", "")).strip().lower()
+    if "não aprovado" in body or "nao aprovado" in body:
+        return False
+    return "aprovado" in body
 
 
 def run(gmail=None, sheets=None) -> None:
