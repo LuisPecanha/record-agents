@@ -59,6 +59,11 @@ def _format_file_content(blurb: str, release_notes: str, social_caption: str) ->
     )
 
 
+def _build_filename(nome_artista: str, titulo_track: str, data_lancamento: str) -> str:
+    safe = f"{nome_artista}_{titulo_track}_{data_lancamento}".replace(" ", "_").replace("/", "-").lower()
+    return f"{safe}.txt"
+
+
 def _save_press_kit(filename: str, content: str, year: str, month: str) -> str:
     dir_path = os.path.join(_PROJECT_ROOT, "press_kits", year, month)
     os.makedirs(dir_path, exist_ok=True)
@@ -107,8 +112,7 @@ def run(sheets, gmail=None, claude=None) -> None:
             year = dt.strftime("%Y")
             month = dt.strftime("%m")
 
-            safe_name = f"{nome_artista}_{titulo_track}_{data_lancamento}".replace(" ", "_").replace("/", "-").lower()
-            filename = f"{safe_name}.txt"
+            filename = _build_filename(nome_artista, titulo_track, data_lancamento)
             file_content = _format_file_content(blurb, release_notes, social_caption)
 
             file_path = _save_press_kit(filename, file_content, year, month)
