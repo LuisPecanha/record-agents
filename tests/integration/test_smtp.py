@@ -1,36 +1,24 @@
-"""Manual test: verifies SMTP sending via GmailClient."""
+"""Integration tests: verifies SMTP connectivity via GmailClient (connection only, no email sent)."""
 
 import os
-import sys
+import smtplib
 
-from dotenv import load_dotenv
+import pytest
 
-load_dotenv()
+pytestmark = pytest.mark.integration
 
-from integrations.gmail_client import GmailClient
 
-to = os.getenv("EMAIL_EQUIPE")
-if not to:
-    print("EMAIL_EQUIPE not found in .env.")
-    sys.exit(1)
+def test_gmail_client_initializes(gmail_client):
+    assert gmail_client is not None
 
-try:
-    gmail = GmailClient()
-except Exception as e:
-    print(f"GmailClient init failed: {e}")
-    sys.exit(1)
 
-subject = "[Balters TEST] SMTP verification"
-body = (
-    "This is an automated test email sent by the Balters Agents system.\n\n"
-    "It confirms that SMTP sending is working correctly via Gmail App Password.\n\n"
-    "You can ignore this message."
-)
+def test_smtp_connection():
+    """Establish an SMTP_SSL connection and authenticate without sending any email."""
+    email = os.getenv("BALTERS_EMAIL")
+    password = os.getenv("GMAIL_APP_PASSWORD")
+    assert email, "BALTERS_EMAIL not set"
+    assert password, "GMAIL_APP_PASSWORD not set"
 
-success = gmail.send_email(to=to, subject=subject, body=body)
-
-if success:
-    print(f"Email sent successfully to {to}.")
-else:
-    print("Failed to send email.")
-    sys.exit(1)
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+        smtp.login(email, password)
+        # login succeeds — connection confirmed, nothing sent
