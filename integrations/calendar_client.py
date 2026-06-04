@@ -1,5 +1,6 @@
 """Google Calendar API client. No business logic."""
 
+import json
 import logging
 import os
 
@@ -13,13 +14,22 @@ _SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
 class CalendarClient:
     def __init__(self):
-        creds_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_PATH", "balters_sheets_service_account.json")
         calendar_id = os.getenv("GOOGLE_CALENDAR_ID")
 
         if not calendar_id:
             raise EnvironmentError("GOOGLE_CALENDAR_ID not found in environment.")
 
-        credentials = Credentials.from_service_account_file(creds_path, scopes=_SCOPES)
+        json_str = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+        if json_str:
+            credentials = Credentials.from_service_account_info(json.loads(json_str), scopes=_SCOPES)
+        else:
+            creds_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_PATH", "balters_sheets_service_account.json")
+            if not creds_path:
+                raise RuntimeError(
+                    "No service account credentials found. "
+                    "Set GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_SERVICE_ACCOUNT_PATH."
+                )
+            credentials = Credentials.from_service_account_file(creds_path, scopes=_SCOPES)
         self.service = build("calendar", "v3", credentials=credentials)
         self.calendar_id = calendar_id
 

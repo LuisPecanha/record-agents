@@ -1,5 +1,6 @@
 """Google Sheets API client. No business logic."""
 
+import json
 import os
 
 import gspread
@@ -18,13 +19,22 @@ _SCOPES = [
 
 class SheetsClient:
     def __init__(self):
-        creds_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_PATH", "balters_sheets_service_account.json")
         spreadsheet_id = os.getenv("GOOGLE_SHEETS_ID_RELEASES")
 
         if not spreadsheet_id:
             raise EnvironmentError("GOOGLE_SHEETS_ID_RELEASES not found in environment.")
 
-        creds = Credentials.from_service_account_file(creds_path, scopes=_SCOPES)
+        json_str = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+        if json_str:
+            creds = Credentials.from_service_account_info(json.loads(json_str), scopes=_SCOPES)
+        else:
+            creds_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_PATH", "balters_sheets_service_account.json")
+            if not creds_path:
+                raise RuntimeError(
+                    "No service account credentials found. "
+                    "Set GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_SERVICE_ACCOUNT_PATH."
+                )
+            creds = Credentials.from_service_account_file(creds_path, scopes=_SCOPES)
         client = gspread.authorize(creds)
         self._spreadsheet = client.open_by_key(spreadsheet_id)
 
