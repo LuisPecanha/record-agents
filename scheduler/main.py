@@ -61,10 +61,22 @@ scheduler.add_job(
 )
 
 print("[boot] Running all agents on startup...")
-email_triage_run(gmail=gmail, sheets=sheets, claude=claude)
-release_calendar_run(sheets=sheets, gmail=gmail, calendar=calendar)
-demo_screening_run(sheets=sheets, gmail=gmail, claude=claude)
-press_kit_run(sheets=sheets, gmail=gmail, claude=claude)
+try:
+    email_triage_run(gmail=gmail, sheets=sheets, claude=claude)
+except Exception as e:
+    print(f"[boot] email_triage_run failed: {e}")
+try:
+    release_calendar_run(sheets=sheets, gmail=gmail, calendar=calendar)
+except Exception as e:
+    print(f"[boot] release_calendar_run failed: {e}")
+try:
+    demo_screening_run(sheets=sheets, gmail=gmail, claude=claude)
+except Exception as e:
+    print(f"[boot] demo_screening_run failed: {e}")
+try:
+    press_kit_run(sheets=sheets, gmail=gmail, claude=claude)
+except Exception as e:
+    print(f"[boot] press_kit_run failed: {e}")
 print("[boot] Startup run complete.")
 
 print("Balters Agents running...")
