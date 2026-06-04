@@ -64,6 +64,10 @@ def _build_filename(nome_artista: str, titulo_track: str, data_lancamento: str) 
     return f"{safe}.txt"
 
 
+# On Railway the filesystem is ephemeral — files written to press_kits/ are lost
+# on every deploy or restart. This is acceptable: the press kit is always emailed
+# as an attachment before the file could be needed, so the local file is never
+# the only copy.
 def _save_press_kit(filename: str, content: str, year: str, month: str) -> str:
     dir_path = os.path.join(_PROJECT_ROOT, "press_kits", year, month)
     os.makedirs(dir_path, exist_ok=True)
