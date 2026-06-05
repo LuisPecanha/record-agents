@@ -159,6 +159,12 @@ def run(gmail=None, sheets=None, claude=None, dry_run: bool = False) -> None:
             gmail.mark_as_read(msg["id"])
             continue
 
+        subject = msg.get("subject", "")
+        if "[APROVACAO PENDENTE]" in subject:
+            print(f"[email_triage] Skipping approval reply: {subject}")
+            gmail.mark_as_read(msg["id"])
+            continue
+
         _process_message(msg, gmail, sheets, claude, dry_run, timestamp)
         print()
 
