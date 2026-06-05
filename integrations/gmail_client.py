@@ -4,7 +4,6 @@ import base64
 import email
 import email.header
 import email.message
-import email.utils
 import imaplib
 import os
 import time
@@ -245,20 +244,26 @@ class GmailClient:
 
     def send_email(self, to: str, subject: str, body: str) -> str:
         try:
-            msg_id = email.utils.make_msgid(domain="balters.com")
-
             mime = MIMEMultipart()
             mime["From"] = self.email_address
             mime["To"] = to
             mime["Subject"] = subject
-            mime["Message-ID"] = msg_id
             mime.attach(MIMEText(body, "plain", "utf-8"))
 
             raw = base64.urlsafe_b64encode(mime.as_bytes()).decode()
-            self._gmail_service().users().messages().send(userId="me", body={"raw": raw}).execute()
+            service = self._gmail_service()
+            result = service.users().messages().send(userId="me", body={"raw": raw}).execute()
+            sent = service.users().messages().get(
+                userId="me", id=result["id"], format="metadata",
+                metadataHeaders=["Message-ID"]
+            ).execute()
+            real_msg_id = next(
+                h["value"] for h in sent["payload"]["headers"]
+                if h["name"] == "Message-ID"
+            )
 
             print(f"[GmailClient] Email sent to {to}.")
-            return msg_id
+            return real_msg_id
 
         except Exception as e:
             print(f"[GmailClient] send_email error: {e}")
