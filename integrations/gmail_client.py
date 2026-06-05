@@ -1,30 +1,45 @@
 """Gmail API client. No business logic."""
 
+import base64
 import email
 import email.header
 import email.message
 import email.utils
 import imaplib
 import os
-import smtplib
 import time
 from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
 
 
 class GmailClient:
     def __init__(self):
         email_address = os.getenv("BALTERS_EMAIL")
         app_password = os.getenv("GMAIL_APP_PASSWORD")
+        client_id = os.getenv("GMAIL_CLIENT_ID")
+        client_secret = os.getenv("GMAIL_CLIENT_SECRET")
+        refresh_token = os.getenv("GMAIL_REFRESH_TOKEN")
 
         if not email_address:
             raise EnvironmentError("BALTERS_EMAIL not found in environment.")
         if not app_password:
             raise EnvironmentError("GMAIL_APP_PASSWORD not found in environment.")
+        if not client_id:
+            raise EnvironmentError("GMAIL_CLIENT_ID not found in environment.")
+        if not client_secret:
+            raise EnvironmentError("GMAIL_CLIENT_SECRET not found in environment.")
+        if not refresh_token:
+            raise EnvironmentError("GMAIL_REFRESH_TOKEN not found in environment.")
 
         self.email_address: str = email_address
         self.app_password: str = app_password
+        self.client_id: str = client_id
+        self.client_secret: str = client_secret
+        self.refresh_token: str = refresh_token
 
         print(f"[GmailClient] Initialized for {self.email_address}")
 
@@ -218,27 +233,33 @@ class GmailClient:
         except Exception as e:
             print(f"[GmailClient] list_folders error: {e}")
 
+    def _gmail_service(self):
+        creds = Credentials(
+            token=None,
+            refresh_token=self.refresh_token,
+            client_id=self.client_id,
+            client_secret=self.client_secret,
+            token_uri="https://oauth2.googleapis.com/token",
+        )
+        return build("gmail", "v1", credentials=creds)
+
     def send_email(self, to: str, subject: str, body: str) -> str:
         try:
-            recipients = [addr.strip() for addr in to.split(",") if addr.strip()]
+            msg_id = email.utils.make_msgid(domain="balters.com")
 
             mime = MIMEMultipart()
             mime["From"] = self.email_address
             mime["To"] = to
             mime["Subject"] = subject
-            mime["Message-ID"] = email.utils.make_msgid(domain="balters.com")
+            mime["Message-ID"] = msg_id
             mime.attach(MIMEText(body, "plain", "utf-8"))
 
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-                smtp.login(self.email_address, self.app_password)
-                smtp.sendmail(self.email_address, recipients, mime.as_string())
+            raw = base64.urlsafe_b64encode(mime.as_bytes()).decode()
+            self._gmail_service().users().messages().send(userId="me", body={"raw": raw}).execute()
 
             print(f"[GmailClient] Email sent to {to}.")
-            return mime["Message-ID"]
+            return msg_id
 
-        except smtplib.SMTPAuthenticationError:
-            print("[GmailClient] send_email: authentication failed. Check your App Password in .env.")
-            return ""
         except Exception as e:
             print(f"[GmailClient] send_email error: {e}")
             return ""
@@ -257,16 +278,12 @@ class GmailClient:
             attachment.add_header("Content-Disposition", "attachment", filename=attachment_filename)
             mime.attach(attachment)
 
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-                smtp.login(self.email_address, self.app_password)
-                smtp.sendmail(self.email_address, to, mime.as_string())
+            raw = base64.urlsafe_b64encode(mime.as_bytes()).decode()
+            self._gmail_service().users().messages().send(userId="me", body={"raw": raw}).execute()
 
             print(f"[GmailClient] Email with attachment sent to {to}.")
             return True
 
-        except smtplib.SMTPAuthenticationError:
-            print("[GmailClient] send_email_with_attachment: authentication failed. Check your App Password in .env.")
-            return False
         except Exception as e:
             print(f"[GmailClient] send_email_with_attachment error: {e}")
             return False
