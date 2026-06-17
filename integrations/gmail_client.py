@@ -259,7 +259,7 @@ class GmailClient:
             ).execute()
             real_msg_id = next(
                 (h["value"] for h in sent["payload"]["headers"]
-                 if h["name"] == "Message-ID"),
+                 if h["name"].lower() == "message-id"),
                 ""
             )
 
