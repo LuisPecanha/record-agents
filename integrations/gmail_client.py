@@ -258,9 +258,14 @@ class GmailClient:
                 metadataHeaders=["Message-ID"]
             ).execute()
             real_msg_id = next(
-                h["value"] for h in sent["payload"]["headers"]
-                if h["name"] == "Message-ID"
+                (h["value"] for h in sent["payload"]["headers"]
+                 if h["name"] == "Message-ID"),
+                ""
             )
+
+            if not real_msg_id:
+                print("[GmailClient] send_email: Message-ID not found in sent message headers.")
+                return ""
 
             print(f"[GmailClient] Email sent to {to}.")
             return real_msg_id
