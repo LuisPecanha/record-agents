@@ -63,7 +63,8 @@ def run(gmail=None, sheets=None) -> None:
             approved = any(_reply_is_approved(r) for r in approver_replies)
 
             if approved:
-                sent = gmail.send_email(to=remetente, subject=assunto, body=rascunho)
+                to_address = _extract_email(remetente)
+                sent = gmail.send_email(to=to_address, subject=assunto, body=rascunho)
 
                 if sent:
                     row_number = row["_row_index"]
